@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { db } from './firebase';
 import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { SiteConfig, Guess } from './types';
@@ -192,12 +193,15 @@ export default function MainSite() {
             <div className="w-[42px] h-[42px] rounded-full grid place-items-center bg-gradient-to-br from-[#c9b3ff] to-[#ffd8ee] shadow-[0_8px_20px_rgba(140,111,232,.2)] text-[20px]">🍼</div>
             <div>Baby Gender Guess</div>
           </div>
-          <nav className="flex gap-2.5 flex-wrap">
+          <nav className="flex gap-2.5 flex-wrap items-center">
             {['活動說明', '倒數時間', '我要猜', '抽禮物'].map((label, i) => (
               <a key={i} href={`#${['about', 'countdown', 'vote', 'gift'][i]}`} className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
                 {label}
               </a>
             ))}
+            <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+              管理後台
+            </Link>
           </nav>
         </div>
       </header>

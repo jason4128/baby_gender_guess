@@ -1,0 +1,485 @@
+import { useState, useEffect } from 'react';
+import { db } from './firebase';
+import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { SiteConfig, Guess } from './types';
+
+export default function MainSite() {
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>({
+    eventTitle: "猜猜我們的小寶寶\n是男寶還是女寶 💜",
+    eventSubtitle: "我們想把迎接寶寶的喜悅分享給每一位家人朋友～在正式揭曉前，先來玩一個小小的猜謎活動吧！猜對的人將有機會獲得小禮物 🎁",
+    closeTime: "2026-08-30T23:59:59",
+    isVotingOpen: true,
+    actualGender: "",
+    winnerCount: 3
+  });
+  
+  const [stats, setStats] = useState({ total: 0, boy: 0, girl: 0 });
+  const [loading, setLoading] = useState(true);
+  
+  // Countdown specific state
+  const [timeLeft, setTimeLeft] = useState({ days: '00', hours: '00', minutes: '00', seconds: '00' });
+  const [isClosed, setIsClosed] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    gender: '',
+    name: '',
+    contact: '',
+    wish: '',
+    giftWish: '',
+    relation: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{type: 'success'|'error', text: React.ReactNode} | null>(null);
+
+  const loadSiteConfig = async () => {
+    try {
+      const ref = doc(db, "settings", "siteConfig");
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        setSiteConfig(prev => ({ ...prev, ...snap.data() as SiteConfig }));
+      }
+    } catch (error) {
+      console.error("載入設定失敗", error);
+    }
+  };
+
+  const loadVoteStats = async () => {
+    try {
+      const snap = await getDocs(collection(db, "guesses"));
+      const votes = snap.docs.map(d => d.data() as Guess);
+
+      const boyCount = votes.filter(v => v.gender === "男寶").length;
+      const girlCount = votes.filter(v => v.gender === "女寶").length;
+      const total = votes.length;
+
+      setStats({ total, boy: boyCount, girl: girlCount });
+    } catch (error) {
+      console.error("讀取票數失敗", error);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await loadSiteConfig();
+      await loadVoteStats();
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (!siteConfig.closeTime) return;
+
+    const timer = setInterval(() => {
+      const target = new Date(siteConfig.closeTime).getTime();
+      const now = new Date().getTime();
+      const diff = target - now;
+
+      if (diff <= 0 || !siteConfig.isVotingOpen) {
+        setTimeLeft({ days: '00', hours: '00', minutes: '00', seconds: '00' });
+        setIsClosed(true);
+        clearInterval(timer);
+        return;
+      }
+
+      setIsClosed(false);
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      setTimeLeft({
+        days: String(days).padStart(2, "0"),
+        hours: String(hours).padStart(2, "0"),
+        minutes: String(minutes).padStart(2, "0"),
+        seconds: String(seconds).padStart(2, "0")
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [siteConfig.closeTime, siteConfig.isVotingOpen]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const submitVote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isClosed) {
+      setSubmitMessage({ type: 'error', text: "活動已截止，目前無法再送出投票。" });
+      return;
+    }
+
+    if (!formData.gender) {
+      setSubmitMessage({ type: 'error', text: "請先選擇你猜測的寶寶性別 💜" });
+      return;
+    }
+
+    if (!formData.name.trim() || !formData.contact.trim()) {
+      setSubmitMessage({ type: 'error', text: "請填寫姓名 / 暱稱與聯絡方式。" });
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitMessage(null);
+
+    try {
+      const q = query(collection(db, "guesses"), where("contact", "==", formData.contact.trim()));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        setSubmitMessage({ type: 'error', text: "這個聯絡方式已經參加過囉～若要修改資料，請聯絡主辦人 💜" });
+        setSubmitting(false);
+        return;
+      }
+
+      await addDoc(collection(db, "guesses"), {
+        ...formData,
+        createdAt: serverTimestamp()
+      });
+
+      setSubmitMessage({
+        type: 'success', 
+        text: (
+          <>
+            已成功送出 💜<br/>
+            <strong>{formData.name}</strong> 的猜測是：<strong>{formData.gender}</strong><br/>
+            謝謝你的參與與祝福，等揭曉寶寶性別後，如果猜對就有機會抽到小禮物喔！
+          </>
+        )
+      });
+      
+      setFormData({
+        gender: '',
+        name: '',
+        contact: '',
+        wish: '',
+        giftWish: '',
+        relation: ''
+      });
+      
+      await loadVoteStats();
+      
+    } catch (error) {
+      console.error("送出失敗", error);
+      setSubmitMessage({ type: 'error', text: "送出失敗，請稍後再試。" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const boyPercent = stats.total ? Math.round((stats.boy / stats.total) * 100) : 50;
+  const girlPercent = stats.total ? 100 - boyPercent : 50;
+
+  if (loading) return null;
+
+  return (
+    <>
+      <div className="floating-bg">
+        <div className="bubble b1" />
+        <div className="bubble b2" />
+        <div className="bubble b3" />
+        <div className="bubble b4" />
+        <div className="bubble b5" />
+      </div>
+
+      <header className="py-5 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+        <div className="bg-white/58 border border-white/85 shadow-[var(--shadow-custom)] backdrop-blur-[14px] rounded-full px-[18px] py-[14px] flex justify-between items-center gap-[14px] flex-wrap">
+          <div className="flex items-center gap-3 font-extrabold text-[var(--color-primary-dark)] tracking-wider">
+            <div className="w-[42px] h-[42px] rounded-full grid place-items-center bg-gradient-to-br from-[#c9b3ff] to-[#ffd8ee] shadow-[0_8px_20px_rgba(140,111,232,.2)] text-[20px]">🍼</div>
+            <div>Baby Gender Guess</div>
+          </div>
+          <nav className="flex gap-2.5 flex-wrap">
+            {['活動說明', '倒數時間', '我要猜', '抽禮物'].map((label, i) => (
+              <a key={i} href={`#${['about', 'countdown', 'vote', 'gift'][i]}`} className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+                {label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section className="py-4 pb-6 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+          <div className="rounded-[var(--radius-xl)] p-6 md:p-10 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,.72),rgba(255,255,255,0)_28%),linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,255,255,.72))] border border-white/80 shadow-[var(--shadow-custom)] grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-6 items-center overflow-hidden relative">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2.5 rounded-full text-sm font-extrabold mb-[18px]">✨ 一起來猜猜看，寶寶到底是男生還是女生？</div>
+              <h1 className="text-[clamp(32px,5vw,56px)] leading-[1.12] text-[var(--color-primary-dark)] mb-3.5 font-extrabold whitespace-pre-line">
+                {siteConfig.eventTitle}
+              </h1>
+              <p className="text-[var(--color-muted)] leading-[1.9] text-base mb-6">
+                {siteConfig.eventSubtitle}
+              </p>
+
+              <div className="flex gap-3.5 flex-wrap flex-col sm:flex-row mb-5">
+                <a className="inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(140,111,232,.34)]" href="#vote">立即參加猜猜看</a>
+                <a className="inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-[var(--color-primary-dark)] bg-white/80 border border-[rgba(140,111,232,.12)] hover:-translate-y-0.5 hover:bg-white" href="#about">先看活動規則</a>
+              </div>
+
+              <div className="flex gap-3 flex-wrap grid grid-cols-1 sm:grid-cols-2 lg:flex">
+                <div className="min-w-[140px] bg-white/75 border border-white/85 shadow-[0_10px_24px_rgba(120,93,200,.1)] rounded-[18px] px-4 py-3.5">
+                  <div className="text-[var(--color-muted)] text-[13px] font-bold mb-1.5">目前參加人數</div>
+                  <div className="text-[24px] font-extrabold text-[var(--color-primary-dark)]">{stats.total}</div>
+                </div>
+                <div className="min-w-[140px] bg-white/75 border border-white/85 shadow-[0_10px_24px_rgba(120,93,200,.1)] rounded-[18px] px-4 py-3.5">
+                  <div className="text-[var(--color-muted)] text-[13px] font-bold mb-1.5">男寶票數</div>
+                  <div className="text-[24px] font-extrabold text-[var(--color-primary-dark)]">{stats.boy}</div>
+                </div>
+                <div className="min-w-[140px] bg-white/75 border border-white/85 shadow-[0_10px_24px_rgba(120,93,200,.1)] rounded-[18px] px-4 py-3.5">
+                  <div className="text-[var(--color-muted)] text-[13px] font-bold mb-1.5">女寶票數</div>
+                  <div className="text-[24px] font-extrabold text-[var(--color-primary-dark)]">{stats.girl}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-h-[360px] lg:min-h-[400px] flex items-center justify-center relative">
+              <div className="w-[min(100%,430px)] aspect-square rounded-[32px] bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,.95),rgba(255,255,255,.35)_28%,rgba(255,255,255,0)_55%),linear-gradient(135deg,rgba(255,255,255,.65),rgba(255,255,255,.35))] border border-white/85 shadow-[var(--shadow-custom)] flex items-center justify-center relative overflow-hidden">
+                <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[20px] top-[36px]">💙 Team Boy?</div>
+                <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[18px] top-[72px] [animation-delay:1s]">💖 Team Girl?</div>
+                <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[28px] bottom-[40px] [animation-delay:2s]">🎀 Baby is coming</div>
+                <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[24px] bottom-[76px] [animation-delay:1.4s]">🧸 Guess & Win</div>
+                <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite]">
+                  <div className="text-[82px] drop-shadow-[0_8px_12px_rgba(0,0,0,.08)]">👶</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="about" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+          <div className="text-center mb-6">
+            <div className="inline-block px-3.5 py-2 rounded-full bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold mb-3">ABOUT THE EVENT</div>
+            <h2 className="text-[clamp(28px,4vw,40px)] text-[var(--color-primary-dark)] mb-2.5 font-bold">活動怎麼玩？</h2>
+            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base">
+              選擇你覺得寶寶是男生還是女生，填上姓名與聯絡方式，最後再留下祝福就完成啦！等寶寶正式揭曉後，我們會從 <strong>猜對的人</strong> 裡抽出幸運朋友送上小禮物 💝
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5 mt-7">
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full after:bg-[radial-gradient(circle,rgba(205,187,255,.25),rgba(205,187,255,0))]">
+              <div className="w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]">1️⃣</div>
+              <h3 className="text-xl text-[var(--color-primary-dark)] mb-2.5 font-bold">選擇你的答案</h3>
+              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px]">選擇你猜測的寶寶性別，可以是「男寶」或「女寶」。</p>
+            </div>
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full after:bg-[radial-gradient(circle,rgba(205,187,255,.25),rgba(205,187,255,0))]">
+              <div className="w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]">2️⃣</div>
+              <h3 className="text-xl text-[var(--color-primary-dark)] mb-2.5 font-bold">填寫姓名與聯絡方式</h3>
+              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px]">方便我們在揭曉後通知猜對的朋友，也可以留下對寶寶或爸媽的祝福。</p>
+            </div>
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full after:bg-[radial-gradient(circle,rgba(205,187,255,.25),rgba(205,187,255,0))]">
+              <div className="w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]">3️⃣</div>
+              <h3 className="text-xl text-[var(--color-primary-dark)] mb-2.5 font-bold">揭曉後抽出小禮物</h3>
+              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px]">活動截止後不再接受投票，等寶寶性別揭曉後，會從猜對的人中抽出幸運得主！</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="countdown" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+          <div className="text-center mb-6">
+            <div className="inline-block px-3.5 py-2 rounded-full bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold mb-3">COUNTDOWN</div>
+            <h2 className="text-[clamp(28px,4vw,40px)] text-[var(--color-primary-dark)] mb-2.5 font-bold">距離截止投票還有</h2>
+            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base">截止時間由後台設定，時間一到將自動關閉投票。</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-6">
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center">
+              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.days}</div>
+              <div className="text-[var(--color-muted)] text-sm font-bold">天</div>
+            </div>
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center">
+              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.hours}</div>
+              <div className="text-[var(--color-muted)] text-sm font-bold">小時</div>
+            </div>
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center">
+              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.minutes}</div>
+              <div className="text-[var(--color-muted)] text-sm font-bold">分鐘</div>
+            </div>
+            <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center">
+              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.seconds}</div>
+              <div className="text-[var(--color-muted)] text-sm font-bold">秒</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="vote" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+          <div className="text-center mb-6">
+            <div className="inline-block px-3.5 py-2 rounded-full bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold mb-3">MAKE YOUR GUESS</div>
+            <h2 className="text-[clamp(28px,4vw,40px)] text-[var(--color-primary-dark)] mb-2.5 font-bold">留下你的猜測吧 💜</h2>
+            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base">
+              選擇你的答案後，再填寫基本資料與祝福，我們就能把這份期待一起收藏起來。
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 mt-7">
+            <div className="bg-white/75 border border-white/85 shadow-[var(--shadow-custom)] rounded-[28px] p-5 sm:p-[26px]">
+              <div className="flex justify-between items-center gap-3 mb-4.5">
+                <h3 className="text-2xl text-[var(--color-primary-dark)] font-bold">票選寶寶性別</h3>
+                <div className="bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">即時統計</div>
+              </div>
+              <div className="text-[var(--color-muted)] leading-[1.8] text-sm mb-5">
+                先選擇你支持的隊伍吧！投票後下方比例會自動更新。
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4.5">
+                <label className={`relative rounded-[24px] px-[18px] py-[22px] min-h-[210px] cursor-pointer transition-all border-2 flex flex-col justify-between overflow-hidden bg-gradient-to-b from-[rgba(207,231,255,.65)] to-[rgba(255,255,255,.88)] ${formData.gender === '男寶' ? 'border-[var(--color-primary)] shadow-[0_18px_34px_rgba(120,93,200,.18)] -translate-y-1' : 'border-transparent hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(120,93,200,.12)]'}`}>
+                  <input type="radio" name="gender" value="男寶" className="hidden" checked={formData.gender === '男寶'} onChange={handleInputChange} />
+                  <div>
+                    <div className="flex justify-between items-center mb-3.5">
+                      <div className="text-[34px]">💙</div>
+                      <div className="bg-white/80 text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">Team Boy</div>
+                    </div>
+                    <h4 className="text-2xl text-[var(--color-primary-dark)] mb-2 font-bold">我猜是男寶</h4>
+                    <p className="text-[var(--color-muted)] leading-[1.75] text-sm">陽光小男孩報到？你覺得這次是帥氣小王子路線嗎 👶</p>
+                  </div>
+                </label>
+
+                <label className={`relative rounded-[24px] px-[18px] py-[22px] min-h-[210px] cursor-pointer transition-all border-2 flex flex-col justify-between overflow-hidden bg-gradient-to-b from-[rgba(255,200,231,.58)] to-[rgba(255,255,255,.88)] ${formData.gender === '女寶' ? 'border-[var(--color-primary)] shadow-[0_18px_34px_rgba(120,93,200,.18)] -translate-y-1' : 'border-transparent hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(120,93,200,.12)]'}`}>
+                  <input type="radio" name="gender" value="女寶" className="hidden" checked={formData.gender === '女寶'} onChange={handleInputChange} />
+                  <div>
+                    <div className="flex justify-between items-center mb-3.5">
+                      <div className="text-[34px]">💖</div>
+                      <div className="bg-white/80 text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">Team Girl</div>
+                    </div>
+                    <h4 className="text-2xl text-[var(--color-primary-dark)] mb-2 font-bold">我猜是女寶</h4>
+                    <p className="text-[var(--color-muted)] leading-[1.75] text-sm">甜甜小公主登場？你是不是已經感受到滿滿可愛氣息了 🎀</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="mt-4.5 bg-white/75 border border-[rgba(140,111,232,.08)] rounded-[18px] p-4">
+                <div className="flex justify-between gap-2.5 mb-3 text-[var(--color-primary-dark)] text-sm font-extrabold">
+                  <span>目前投票比例</span>
+                  <span>男寶 {boyPercent}% / 女寶 {girlPercent}%</span>
+                </div>
+                <div className="h-[14px] bg-[#f0e9ff] rounded-full overflow-hidden flex">
+                  <div className="h-full bg-gradient-to-r from-[#9ed0ff] to-[#cce6ff] transition-all duration-300" style={{ width: `${boyPercent}%` }}></div>
+                  <div className="h-full bg-gradient-to-r from-[#ffbfdc] to-[#ffd7ea] transition-all duration-300" style={{ width: `${girlPercent}%` }}></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div className="bg-white/80 rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)]">💙 男寶票數：<span>{stats.boy}</span></div>
+                  <div className="bg-white/80 rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)]">💖 女寶票數：<span>{stats.girl}</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/75 border border-white/85 shadow-[var(--shadow-custom)] rounded-[28px] p-5 sm:p-[26px]">
+              <h3 className="text-2xl text-[var(--color-primary-dark)] mb-2.5 font-bold">填寫你的參加資訊</h3>
+              <div className="text-[var(--color-muted)] leading-[1.8] mb-5 text-sm">
+                留下你的名字、聯絡方式與祝福，活動截止後若猜對，我們就能通知你抽小禮物 🎁
+              </div>
+
+              {isClosed && (
+                <div className="mt-4.5 bg-[rgba(239,93,122,.12)] border border-[rgba(239,93,122,.2)] text-[#bf3955] px-[18px] py-[16px] rounded-[18px] leading-[1.8] font-bold mb-4">
+                  活動已截止，目前無法再送出投票。謝謝大家的參與 💜
+                </div>
+              )}
+
+              <form onSubmit={submitVote} className={isClosed ? 'opacity-70 pointer-events-none' : ''}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="flex flex-col gap-2 mb-3.5">
+                    <label htmlFor="name" className="text-sm font-extrabold text-[var(--color-primary-dark)]">姓名 / 暱稱 *</label>
+                    <input id="name" name="name" value={formData.name} onChange={handleInputChange} className="w-full bg-white/90 border border-[rgba(140,111,232,.12)] rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[rgba(140,111,232,.35)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.1)]" type="text" placeholder="例如：小龍 / 王小美" required />
+                  </div>
+
+                  <div className="flex flex-col gap-2 mb-3.5">
+                    <label htmlFor="contact" className="text-sm font-extrabold text-[var(--color-primary-dark)]">聯絡方式 *</label>
+                    <input id="contact" name="contact" value={formData.contact} onChange={handleInputChange} className="w-full bg-white/90 border border-[rgba(140,111,232,.12)] rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[rgba(140,111,232,.35)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.1)]" type="text" placeholder="LINE / 電話 / IG" required />
+                  </div>
+
+                  <div className="flex flex-col gap-2 mb-3.5 col-span-1 sm:col-span-2">
+                    <label htmlFor="wish" className="text-sm font-extrabold text-[var(--color-primary-dark)]">給寶寶或爸媽的祝福</label>
+                    <textarea id="wish" name="wish" value={formData.wish} onChange={handleInputChange} className="w-full bg-white/90 border border-[rgba(140,111,232,.12)] rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[rgba(140,111,232,.35)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.1)] min-h-[120px] resize-y leading-[1.7]" placeholder="例如：希望寶寶平安健康長大，爸爸媽媽也要好好休息 💜"></textarea>
+                  </div>
+
+                  <div className="flex flex-col gap-2 mb-3.5">
+                    <label htmlFor="giftWish" className="text-sm font-extrabold text-[var(--color-primary-dark)]">如果猜對，想抽的小禮物</label>
+                    <select id="giftWish" name="giftWish" value={formData.giftWish} onChange={handleInputChange} className="w-full bg-white/90 border border-[rgba(140,111,232,.12)] rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[rgba(140,111,232,.35)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.1)]">
+                      <option value="">請選擇（可不填）</option>
+                      <option>咖啡 / 飲料券</option>
+                      <option>小甜點 / 餅乾禮盒</option>
+                      <option>超商禮券</option>
+                      <option>可愛小物 / 文具</option>
+                      <option>都可以，我只是來祝福 💕</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-2 mb-3.5">
+                    <label htmlFor="relation" className="text-sm font-extrabold text-[var(--color-primary-dark)]">你是我們的</label>
+                    <select id="relation" name="relation" value={formData.relation} onChange={handleInputChange} className="w-full bg-white/90 border border-[rgba(140,111,232,.12)] rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[rgba(140,111,232,.35)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.1)]">
+                      <option value="">請選擇（可不填）</option>
+                      <option>家人</option>
+                      <option>親戚</option>
+                      <option>朋友</option>
+                      <option>同事</option>
+                      <option>同學</option>
+                      <option>其他</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 bg-[rgba(140,111,232,.08)] rounded-[16px] px-4 py-3.5 text-[var(--color-muted)] text-[13px] leading-[1.8]">
+                  📌 <strong>活動規則提醒：</strong><br/>
+                  1. 每人原則上填寫一次。<br/>
+                  2. 活動截止後將不再受理修改。<br/>
+                  3. 猜對者才有抽獎資格。<br/>
+                  4. 實際中獎資格與禮物內容以主辦人公告為準。
+                </div>
+
+                <div className="flex gap-3 flex-wrap items-center mt-4.5">
+                  <button type="submit" disabled={submitting} className={`inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] w-full sm:w-auto shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(140,111,232,.34)] ${submitting ? 'opacity-70 cursor-not-allowed hover:translate-y-0' : ''}`}>
+                    {isClosed ? '活動已截止' : '送出我的猜測'}
+                  </button>
+                  {submitting && <div className="inline-flex items-center gap-2 text-[var(--color-muted)] text-sm font-bold">⏳ 送出中...</div>}
+                </div>
+
+                {submitMessage && (
+                  <div className={`mt-4.5 px-[18px] py-[16px] rounded-[18px] leading-[1.8] font-bold ${
+                    submitMessage.type === 'success' 
+                      ? 'bg-[rgba(61,187,131,.12)] border border-[rgba(61,187,131,.2)] text-[#2f8f67]' 
+                      : 'bg-[rgba(239,93,122,.12)] border border-[rgba(239,93,122,.2)] text-[#bf3955]'
+                  }`}>
+                    {submitMessage.text}
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="gift" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+          <div className="relative mt-[18px] bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,.55),rgba(255,255,255,0)_28%),linear-gradient(135deg,#8c6fe8,#b49bff)] text-white rounded-[30px] shadow-[0_18px_40px_rgba(109,80,207,.28)] p-[30px] overflow-hidden after:content-[''] after:absolute after:w-[220px] after:h-[220px] after:rounded-full after:bg-white/10 after:-right-[60px] after:-top-[60px] before:content-[''] before:absolute before:w-[160px] before:h-[160px] before:rounded-full before:bg-white/10 before:-left-[30px] before:-bottom-[60px]">
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.1fr_.9fr] gap-6 items-center">
+              <div>
+                <h3 className="text-[30px] mb-3 font-bold">猜對的人，我們會抽出小禮物 🎁</h3>
+                <p className="leading-[1.95] opacity-95 text-[15px] font-medium">
+                  為了讓這份等待更有參與感，我們準備了一點小心意給猜對的朋友。<br/><br/>
+                  等到寶寶性別正式揭曉後，會從 <strong>猜對答案的名單中抽出幸運得主</strong>，並用你留下的聯絡方式通知你。謝謝你一起參與這個可愛又充滿期待的小活動 💜
+                </p>
+              </div>
+              <div className="grid gap-3">
+                <div className="bg-white/15 border border-white/20 rounded-[18px] px-4 py-3.5 leading-[1.75] backdrop-blur-[8px]">🎀 <strong>抽獎資格：</strong>活動截止前完成填寫，且猜中寶寶性別。</div>
+                <div className="bg-white/15 border border-white/20 rounded-[18px] px-4 py-3.5 leading-[1.75] backdrop-blur-[8px]">🎉 <strong>公布方式：</strong>性別揭曉後，由爸媽另行通知或於社群公布。</div>
+                <div className="bg-white/15 border border-white/20 rounded-[18px] px-4 py-3.5 leading-[1.75] backdrop-blur-[8px]">💝 <strong>禮物內容：</strong>可自訂為超商禮券、咖啡券、小甜點、可愛小物等。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+        <div className="bg-white/70 border border-white/85 shadow-[var(--shadow-custom)] rounded-[28px] p-6 text-center">
+          <h3 className="text-2xl text-[var(--color-primary-dark)] mb-2.5 font-bold">謝謝你參與我們的小活動 🍼</h3>
+          <p className="text-[var(--color-muted)] leading-[1.85] mb-3.5 font-medium">
+            每一份猜測、每一句祝福，對我們來說都是很珍貴的心意。一起期待寶寶正式揭曉的那一天吧 💜
+          </p>
+          <div className="text-[var(--color-muted)] text-[13px]">
+            Baby Gender Guess ・ Powered by AI Studio & Firebase
+          </div>
+        </div>
+      </footer>
+    </>
+  );
+}

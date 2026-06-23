@@ -1,0 +1,30 @@
+{
+  "collections": [
+    {
+      "name": "settings",
+      "rules": [
+        {
+          "allow": "read",
+          "condition": "true"
+        },
+        {
+          "allow": "write",
+          "condition": "true"
+        }
+      ]
+    },
+    {
+      "name": "guesses",
+      "rules": [
+        {
+          "allow": "read",
+          "condition": "true"
+        },
+        {
+          "allow": "write",
+          "condition": "true"
+        }
+      ]
+    }
+  ]
+}

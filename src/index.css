@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #8c6fe8;
+  --color-primary-dark: #6d50cf;
+  --color-secondary: #cdbbff;
+  --color-pink: #ffc8e7;
+  --color-blue: #cfe7ff;
+  --color-text: #4f4274;
+  --color-muted: #7f72a4;
+  --color-success: #3dbb83;
+  --color-danger: #ef5d7a;
+  --color-bg1: #faf7ff;
+  --color-bg2: #f2ebff;
+  --color-bg3: #ede4ff;
+  --shadow-custom: 0 18px 45px rgba(120, 93, 200, .15);
+  --radius-xl: 30px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --font-sans: "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255,255,255,.95) 0, rgba(255,255,255,0) 20%),
+    radial-gradient(circle at 90% 15%, rgba(255,255,255,.85) 0, rgba(255,255,255,0) 20%),
+    linear-gradient(180deg, var(--color-bg1), var(--color-bg2) 45%, var(--color-bg3));
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.floating-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .35);
+  animation: floatY 8s ease-in-out infinite;
+  backdrop-filter: blur(3px);
+}
+
+.b1 { width: 120px; height: 120px; left: 6%; top: 12%; }
+.b2 { width: 80px; height: 80px; right: 10%; top: 15%; animation-delay: 1s; }
+.b3 { width: 150px; height: 150px; right: 14%; bottom: 18%; animation-delay: 2s; }
+.b4 { width: 90px; height: 90px; left: 12%; bottom: 12%; animation-delay: 1.6s; }
+.b5 { width: 60px; height: 60px; left: 50%; top: 20%; animation-delay: .7s; }
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-18px); }
+}
+
+@keyframes pulse-custom {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+th, td {
+  padding: 14px 14px;
+  border-bottom: 1px solid #f1ecff;
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+  line-height: 1.7;
+}
+th {
+  background: #faf7ff;
+  color: var(--color-primary-dark);
+  font-size: 13px;
+  font-weight: 800;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}

@@ -176,6 +176,7 @@ export default function AdminDashboard() {
           <p className="text-[color:var(--color-muted)] leading-relaxed">這裡可以管理網站設定、查看投票名單、匯出資料、設定正確答案與抽出得獎者。</p>
         </div>
         <div className="flex gap-3 flex-wrap items-center">
+          <a href="#/" className="bg-white text-[color:var(--color-primary-dark)] border border-[rgba(140,111,232,.12)] px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-sm no-underline">回首頁</a>
           <button onClick={loadData} className="bg-white text-[color:var(--color-primary-dark)] border border-[rgba(140,111,232,.12)] px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-sm">重新整理資料</button>
           <button onClick={exportCSV} className="bg-gradient-to-br from-[var(--color-primary)] to-[#aa91ff] text-white shadow-[0_12px_26px_rgba(140,111,232,.25)] px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform">匯出 CSV</button>
         </div>

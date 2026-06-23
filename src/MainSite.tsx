@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { db } from './firebase';
 import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { SiteConfig, Guess } from './types';
+import babyImage from './assets/images/baby_whale_avatar_1782203089696.jpg';
 
 export default function MainSite() {
   const [siteConfig, setSiteConfig] = useState<SiteConfig>({
@@ -270,8 +271,8 @@ export default function MainSite() {
                 <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[18px] top-[72px] [animation-delay:1s]">💖 Team Girl?</div>
                 <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[28px] bottom-[40px] [animation-delay:2s]">🎀 Baby is coming</div>
                 <div className="absolute px-3.5 py-2.5 bg-white/90 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[24px] bottom-[76px] [animation-delay:1.4s]">🧸 Guess & Win</div>
-                <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite]">
-                  <div className="text-[82px] drop-shadow-[0_8px_12px_rgba(0,0,0,.08)]">👶</div>
+                <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden">
+                  <img src={babyImage} alt="Baby" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
               </div>
             </div>

@@ -195,9 +195,16 @@ export default function MainSite() {
           </div>
           <nav className="flex gap-2.5 flex-wrap items-center">
             {['活動說明', '倒數時間', '我要猜', '抽禮物'].map((label, i) => (
-              <a key={i} href={`#${['about', 'countdown', 'vote', 'gift'][i]}`} className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+              <button 
+                key={i} 
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById(['about', 'countdown', 'vote', 'gift'][i])?.scrollIntoView({ behavior: 'smooth' });
+                }} 
+                className="cursor-pointer border-none bg-transparent no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]"
+              >
                 {label}
-              </a>
+              </button>
             ))}
             <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
               管理後台
@@ -219,8 +226,26 @@ export default function MainSite() {
               </p>
 
               <div className="flex gap-3.5 flex-wrap flex-col sm:flex-row mb-5">
-                <a className="inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(140,111,232,.34)]" href="#vote">立即參加猜猜看</a>
-                <a className="inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-[var(--color-primary-dark)] bg-white/80 border border-[rgba(140,111,232,.12)] hover:-translate-y-0.5 hover:bg-white" href="#about">先看活動規則</a>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('vote')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="cursor-pointer border-none inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(140,111,232,.34)]"
+                >
+                  立即參加猜猜看
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="cursor-pointer inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-[var(--color-primary-dark)] bg-white/80 border border-[rgba(140,111,232,.12)] hover:-translate-y-0.5 hover:bg-white"
+                >
+                  先看活動規則
+                </button>
               </div>
 
               <div className="flex gap-3 flex-wrap grid grid-cols-1 sm:grid-cols-2 lg:flex">

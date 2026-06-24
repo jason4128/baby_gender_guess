@@ -4,8 +4,14 @@ import { db } from './firebase';
 import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { SiteConfig, Guess } from './types';
 import babyImage from './assets/images/baby_whale_avatar_1782203089696.jpg';
+import { themes } from './themes';
 
-export default function MainSite() {
+interface MainSiteProps {
+  themeId: string;
+  setThemeId: (themeId: string) => void;
+}
+
+export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const [siteConfig, setSiteConfig] = useState<SiteConfig>({
     eventTitle: "猜猜我們的小寶寶\n是男寶還是女寶 💜",
     eventSubtitle: "我們想把迎接寶寶的喜悅分享給每一位家人朋友～在正式揭曉前，先來玩一個小小的猜謎活動吧！猜對的人將有機會獲得小禮物 🎁",
@@ -207,9 +213,28 @@ export default function MainSite() {
                 {label}
               </button>
             ))}
-            <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+            <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)] mr-1">
               管理後台
             </Link>
+            <div className="relative inline-flex items-center">
+              <span className="text-xs font-extrabold text-[var(--color-muted)] mr-1.5 hidden sm:inline">🎨 切換配色：</span>
+              <div className="relative">
+                <select
+                  value={themeId}
+                  onChange={(e) => setThemeId(e.target.value)}
+                  className="appearance-none bg-white text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.18)] hover:border-[var(--color-primary)] px-3 py-1.5 pr-7 rounded-full text-xs font-bold shadow-sm focus:outline-none cursor-pointer transition-all"
+                >
+                  {themes.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.emoji} {t.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-primary-dark)] text-[9px] opacity-70">
+                  ▼
+                </div>
+              </div>
+            </div>
           </nav>
         </div>
       </header>

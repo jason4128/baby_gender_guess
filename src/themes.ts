@@ -13,6 +13,11 @@ export interface Theme {
     '--color-bg1': string;
     '--color-bg2': string;
     '--color-bg3': string;
+    '--color-glass-bg'?: string;
+    '--color-glass-border'?: string;
+    '--color-card-grad'?: string;
+    '--color-glow-1'?: string;
+    '--color-glow-2'?: string;
   };
 }
 
@@ -32,6 +37,55 @@ export const themes: Theme[] = [
       '--color-bg1': '#faf7ff',
       '--color-bg2': '#f2ebff',
       '--color-bg3': '#ede4ff',
+      '--color-glass-bg': 'rgba(255, 255, 255, 0.7)',
+      '--color-glass-border': 'rgba(255, 255, 255, 0.85)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255,255,255,0.72), rgba(255,255,255,0) 28%), linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72))',
+      '--color-glow-1': 'rgba(255, 255, 255, 0.95)',
+      '--color-glow-2': 'rgba(255, 255, 255, 0.85)',
+    },
+  },
+  {
+    id: 'casino-gold',
+    name: '皇家威尼斯娛樂城 👑 (熱門賭神版)',
+    emoji: '🎰',
+    colors: {
+      '--color-primary': '#ffd700',
+      '--color-primary-dark': '#ffaa00',
+      '--color-secondary': '#ff3366',
+      '--color-pink': '#ff3366',
+      '--color-blue': '#00f0ff',
+      '--color-text': '#f3f4f6',
+      '--color-muted': '#94a3b8',
+      '--color-bg1': '#090a0f',
+      '--color-bg2': '#121420',
+      '--color-bg3': '#0a0b12',
+      '--color-glass-bg': 'rgba(18, 20, 32, 0.85)',
+      '--color-glass-border': 'rgba(255, 215, 0, 0.35)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0) 35%), linear-gradient(135deg, rgba(26, 29, 46, 0.95), rgba(15, 17, 28, 0.95))',
+      '--color-glow-1': 'rgba(255, 215, 0, 0.2)',
+      '--color-glow-2': 'rgba(255, 51, 102, 0.25)',
+    },
+  },
+  {
+    id: 'casino-sport',
+    name: '威博線上體育下注網 ⚽',
+    emoji: '📈',
+    colors: {
+      '--color-primary': '#39ff14',
+      '--color-primary-dark': '#1bc402',
+      '--color-secondary': '#00f0ff',
+      '--color-pink': '#ff007f',
+      '--color-blue': '#00f0ff',
+      '--color-text': '#f8fafc',
+      '--color-muted': '#cbd5e1',
+      '--color-bg1': '#0b0f19',
+      '--color-bg2': '#111827',
+      '--color-bg3': '#070a10',
+      '--color-glass-bg': 'rgba(15, 23, 42, 0.9)',
+      '--color-glass-border': 'rgba(57, 255, 20, 0.25)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(57, 255, 20, 0.12), rgba(0, 0, 0, 0) 40%), linear-gradient(135deg, rgba(17, 24, 39, 0.98), rgba(9, 13, 22, 0.98))',
+      '--color-glow-1': 'rgba(57, 255, 20, 0.15)',
+      '--color-glow-2': 'rgba(0, 240, 255, 0.15)',
     },
   },
   {
@@ -49,6 +103,11 @@ export const themes: Theme[] = [
       '--color-bg1': '#fffbf9',
       '--color-bg2': '#fff0eb',
       '--color-bg3': '#f7e3db',
+      '--color-glass-bg': 'rgba(255, 255, 255, 0.7)',
+      '--color-glass-border': 'rgba(255, 255, 255, 0.85)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255,255,255,0.72), rgba(255,255,255,0) 28%), linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72))',
+      '--color-glow-1': 'rgba(255, 255, 255, 0.95)',
+      '--color-glow-2': 'rgba(255, 255, 255, 0.85)',
     },
   },
   {
@@ -66,6 +125,11 @@ export const themes: Theme[] = [
       '--color-bg1': '#fffdf9',
       '--color-bg2': '#fff6e5',
       '--color-bg3': '#ffebd3',
+      '--color-glass-bg': 'rgba(255, 255, 255, 0.7)',
+      '--color-glass-border': 'rgba(255, 255, 255, 0.85)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255,255,255,0.72), rgba(255,255,255,0) 28%), linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72))',
+      '--color-glow-1': 'rgba(255, 255, 255, 0.95)',
+      '--color-glow-2': 'rgba(255, 255, 255, 0.85)',
     },
   },
   {
@@ -83,6 +147,11 @@ export const themes: Theme[] = [
       '--color-bg1': '#fffcfd',
       '--color-bg2': '#fff0f3',
       '--color-bg3': '#ffe5ec',
+      '--color-glass-bg': 'rgba(255, 255, 255, 0.7)',
+      '--color-glass-border': 'rgba(255, 255, 255, 0.85)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255,255,255,0.72), rgba(255,255,255,0) 28%), linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72))',
+      '--color-glow-1': 'rgba(255, 255, 255, 0.95)',
+      '--color-glow-2': 'rgba(255, 255, 255, 0.85)',
     },
   },
   {
@@ -100,6 +169,34 @@ export const themes: Theme[] = [
       '--color-bg1': '#f8f9fa',
       '--color-bg2': '#e9ecef',
       '--color-bg3': '#dee2e6',
+      '--color-glass-bg': 'rgba(255, 255, 255, 0.7)',
+      '--color-glass-border': 'rgba(255, 255, 255, 0.85)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255,255,255,0.72), rgba(255,255,255,0) 28%), linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72))',
+      '--color-glow-1': 'rgba(255, 255, 255, 0.95)',
+      '--color-glow-2': 'rgba(255, 255, 255, 0.85)',
+    },
+  },
+  {
+    id: 'milktea',
+    name: '溫馨暖雅奶茶 🧋',
+    emoji: '🧋',
+    colors: {
+      '--color-primary': '#b08e72',
+      '--color-primary-dark': '#7d5c43',
+      '--color-secondary': '#eedac5',
+      '--color-pink': '#f3e5d8',
+      '--color-blue': '#d8e5e3',
+      '--color-text': '#524339',
+      '--color-muted': '#847366',
+      '--color-bg1': '#fdfaf7',
+      '--color-bg2': '#f6ede4',
+      '--color-bg3': '#eae0d2',
+      '--color-glass-bg': 'rgba(255, 255, 255, 0.72)',
+      '--color-glass-border': 'rgba(255, 255, 255, 0.88)',
+      '--color-card-grad': 'radial-gradient(circle at top right, rgba(255,255,255,0.75), rgba(255,255,255,0) 28%), linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))',
+      '--color-glow-1': 'rgba(255, 255, 255, 0.95)',
+      '--color-glow-2': 'rgba(255, 255, 255, 0.85)',
     },
   },
 ];
+

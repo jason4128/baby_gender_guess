@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { db, auth } from './firebase';
 import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { SiteConfig, Guess } from './types';
+import { SiteConfig, Guess, isAdmin } from './types';
 // @ts-ignore
 import babyImage from './assets/images/baby_whale_avatar_1782203089696.jpg';
 // @ts-ignore
@@ -300,7 +300,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
               { id: 'countdown', label: isGambling ? '封盤倒數' : '倒數時間' },
               { id: 'vote', label: isGambling ? '立即投注' : '我要猜' },
               { id: 'gift', label: isGambling ? '派彩福利' : '抽禮物' },
-              ...(siteConfig.actualGender || (currentUser && currentUser.email === 'user@gmail.com')
+              ...(siteConfig.actualGender || isAdmin(currentUser?.email)
                 ? [{ id: 'reveal', label: isGambling ? '👑 派彩開獎' : '🎉 揭曉抽獎' }]
                 : [])
             ].map((item) => (
@@ -315,7 +315,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 {item.label}
               </button>
             ))}
-            {currentUser && currentUser.email === 'user@gmail.com' ? (
+            {isAdmin(currentUser?.email) ? (
               <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
                 管理後台
               </Link>
@@ -784,7 +784,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           </div>
         </section>
 
-        {(siteConfig.actualGender || (currentUser && currentUser.email === 'user@gmail.com')) && (
+        {(siteConfig.actualGender || isAdmin(currentUser?.email)) && (
           <section id="reveal" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10 scroll-mt-6">
             <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 md:p-10 text-center relative overflow-hidden" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
               

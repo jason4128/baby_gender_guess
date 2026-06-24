@@ -3,6 +3,7 @@ export interface SiteConfig {
   isVotingOpen: boolean;
   actualGender: string;
   winnerCount: number;
+  winners?: Guess[];
 }
 
 export interface InviteCode {
@@ -23,3 +24,11 @@ export interface Guess {
   inviteCode?: string;
   createdAt: any; // Firestore timestamp
 }
+
+export const ADMIN_EMAILS = ['user@gmail.com', 'jason2134@gmail.com'];
+
+export function isAdmin(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email.toLowerCase());
+}
+

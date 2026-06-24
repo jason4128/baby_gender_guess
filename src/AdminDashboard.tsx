@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from './firebase';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
-import { SiteConfig, Guess, InviteCode } from './types';
+import { SiteConfig, Guess, InviteCode, isAdmin, ADMIN_EMAILS } from './types';
 import { themes } from './themes';
 
 interface AdminDashboardProps {
@@ -139,7 +139,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setAuthLoading(false);
-      if (user && user.email === 'user@gmail.com') {
+      if (user && isAdmin(user.email)) {
         loadData();
       }
     });
@@ -152,7 +152,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
     setLoginError('');
     try {
       const credential = await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
-      if (credential.user.email !== 'user@gmail.com') {
+      if (!isAdmin(credential.user.email)) {
         setLoginError('您登入的帳號非管理員帳號！');
       } else {
         showToast('success', '登入成功！');
@@ -175,8 +175,8 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      if (result.user.email !== 'user@gmail.com') {
-        setLoginError('您登入的 Google 帳號非管理員帳號！請登出並改用 user@gmail.com 帳號。');
+      if (!isAdmin(result.user.email)) {
+        setLoginError('您登入的 Google 帳號非管理員帳號！請登出並改用管理員帳號。');
       } else {
         showToast('success', 'Google 登入成功！');
       }
@@ -394,7 +394,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
     );
   }
 
-  if (!currentUser) {
+  if (!currentUser || !currentUser.email) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#faf6f0] to-[#f4ebe1] p-4 font-sans">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-[0_24px_48px_rgba(176,142,114,0.15)] border border-[#eedac5] overflow-hidden">
@@ -473,7 +473,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
     );
   }
 
-  if (currentUser.email !== 'user@gmail.com') {
+  if (!isAdmin(currentUser.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#faf6f0] to-[#f4ebe1] p-4 font-sans">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-[0_24px_48px_rgba(176,142,114,0.15)] border border-[#eedac5] overflow-hidden p-8 text-center">
@@ -483,7 +483,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
           <h2 className="text-2xl font-bold text-[#524339] mb-3">權限不足</h2>
           <p className="text-[#8c7a6b] text-sm leading-relaxed mb-6">
             您的登入帳號為 <span className="font-extrabold text-[#524339]">{currentUser.email}</span>。<br />
-            本後台僅限 <span className="font-extrabold text-red-500">user@gmail.com</span> 登入存取。
+            本後台僅限 <span className="font-extrabold text-red-500">{ADMIN_EMAILS.join(' 或 ')}</span> 登入存取。
           </p>
           <div className="space-y-3">
             <button 

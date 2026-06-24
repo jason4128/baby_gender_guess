@@ -55,6 +55,12 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{type: 'success'|'error', text: React.ReactNode} | null>(null);
 
+  const [guesses, setGuesses] = useState<Guess[]>([]);
+  const [revealState, setRevealState] = useState<'initial' | 'revealing' | 'revealed'>('initial');
+  const [drawState, setDrawState] = useState<'hidden' | 'ready' | 'drawing' | 'done'>('hidden');
+  const [rollingName, setRollingName] = useState<string>('');
+  const [revealedGenderFlashing, setRevealedGenderFlashing] = useState<string>('男寶');
+
   const loadSiteConfig = async () => {
     try {
       const ref = doc(db, "settings", "siteConfig");
@@ -66,7 +72,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           closeTime: data.closeTime || prev.closeTime,
           isVotingOpen: data.isVotingOpen ?? prev.isVotingOpen,
           actualGender: data.actualGender || prev.actualGender,
-          winnerCount: data.winnerCount || prev.winnerCount
+          winnerCount: data.winnerCount || prev.winnerCount,
+          winners: data.winners || []
         }));
       }
     } catch (error) {
@@ -77,7 +84,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const loadVoteStats = async () => {
     try {
       const snap = await getDocs(collection(db, "guesses"));
-      const votes = snap.docs.map(d => d.data() as Guess);
+      const votes = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Guess);
+      setGuesses(votes);
 
       const boyCount = votes.filter(v => v.gender === "男寶").length;
       const girlCount = votes.filter(v => v.gender === "女寶").length;
@@ -130,6 +138,46 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
     return () => clearInterval(timer);
   }, [siteConfig.closeTime, siteConfig.isVotingOpen]);
+
+  const handleStartReveal = () => {
+    setRevealState('revealing');
+    setDrawState('hidden');
+    let flashCount = 0;
+    const interval = setInterval(() => {
+      setRevealedGenderFlashing(prev => prev === '男寶' ? '女寶' : '男寶');
+      flashCount++;
+      if (flashCount >= 30) {
+        clearInterval(interval);
+        setRevealState('revealed');
+        setDrawState('ready');
+      }
+    }, 100);
+  };
+
+  const handleStartDraw = () => {
+    if (!siteConfig.winners || siteConfig.winners.length === 0) {
+      alert("目前主辦人尚未在後台完成幸運得主抽獎，請稍候重試或通知主辦人！");
+      return;
+    }
+    setDrawState('drawing');
+    const correctCandidates = guesses.filter(g => g.gender === siteConfig.actualGender);
+    if (correctCandidates.length === 0) {
+      setDrawState('done');
+      return;
+    }
+    
+    let iterations = 0;
+    const maxIterations = 40;
+    const interval = setInterval(() => {
+      const randomCandidate = correctCandidates[Math.floor(Math.random() * correctCandidates.length)];
+      setRollingName(randomCandidate.name);
+      iterations++;
+      if (iterations >= maxIterations) {
+        clearInterval(interval);
+        setDrawState('done');
+      }
+    }, 80);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -240,31 +288,39 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
         <div className="bubble b5" />
       </div>
 
-      <header className="py-5 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
-        <div className="shadow-[var(--shadow-custom)] backdrop-blur-[14px] rounded-full px-[18px] py-[14px] flex justify-between items-center gap-[14px] flex-wrap" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-          <div className="flex items-center gap-3 font-extrabold text-[var(--color-primary-dark)] tracking-wider">
-            <div className="w-[42px] h-[42px] rounded-full grid place-items-center bg-gradient-to-br from-[#c9b3ff] to-[#ffd8ee] shadow-[0_8px_20px_rgba(140,111,232,.2)] text-[20px]">🍼</div>
+      <header className="py-4 md:py-5 w-[min(1180px,calc(100%-24px))] mx-auto relative z-10">
+        <div className="shadow-[var(--shadow-custom)] backdrop-blur-[14px] rounded-3xl md:rounded-full px-4 py-3 md:px-[18px] md:py-[14px] flex flex-col md:flex-row justify-between items-center gap-3 md:gap-[14px]" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+          <div className="flex items-center gap-2.5 sm:gap-3 font-extrabold text-[var(--color-primary-dark)] tracking-wider text-sm sm:text-base">
+            <div className="w-[36px] h-[36px] sm:w-[42px] sm:h-[42px] rounded-full grid place-items-center bg-gradient-to-br from-[#c9b3ff] to-[#ffd8ee] shadow-[0_6px_16px_rgba(140,111,232,.18)] text-[16px] sm:text-[20px]">🍼</div>
             <div>{isGambling ? "🎰 寶寶性別預測娛樂城" : "Baby Gender Guess"}</div>
           </div>
-          <nav className="flex gap-2.5 flex-wrap items-center">
-            {['活動說明', '倒數時間', '我要猜', '抽禮物'].map((label, i) => (
+          <nav className="flex gap-1 sm:gap-2 flex-wrap items-center justify-center">
+            {[
+              { id: 'about', label: isGambling ? '下注規則' : '活動說明' },
+              { id: 'countdown', label: isGambling ? '封盤倒數' : '倒數時間' },
+              { id: 'vote', label: isGambling ? '立即投注' : '我要猜' },
+              { id: 'gift', label: isGambling ? '派彩福利' : '抽禮物' },
+              ...(siteConfig.actualGender || (currentUser && currentUser.email === 'user@gmail.com')
+                ? [{ id: 'reveal', label: isGambling ? '👑 派彩開獎' : '🎉 揭曉抽獎' }]
+                : [])
+            ].map((item) => (
               <button 
-                key={i} 
+                key={item.id} 
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById(['about', 'countdown', 'vote', 'gift'][i])?.scrollIntoView({ behavior: 'smooth' });
+                  document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
                 }} 
-                className="cursor-pointer border-none bg-transparent no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]"
+                className="cursor-pointer border-none bg-transparent no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]"
               >
-                {isGambling ? ['下注規則', '封盤倒數', '立即投注', '派彩福利'][i] : label}
+                {item.label}
               </button>
             ))}
             {currentUser && currentUser.email === 'user@gmail.com' ? (
-              <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+              <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
                 管理後台
               </Link>
             ) : (
-              <Link to="/admin" className="no-underline text-white font-extrabold text-xs px-4 py-2.5 rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[#b49bff] hover:opacity-90 active:scale-95 transition-all shadow-md">
+              <Link to="/admin" className="no-underline text-white font-extrabold text-[10px] sm:text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[#b49bff] hover:opacity-90 active:scale-95 transition-all shadow-md">
                 🔑 登入
               </Link>
             )}
@@ -310,35 +366,35 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </button>
               </div>
 
-              <div className="flex gap-3 flex-wrap grid grid-cols-1 sm:grid-cols-2 lg:flex">
-                <div className="min-w-[140px] border shadow-[0_10px_24px_rgba(120,93,200,.1)] rounded-[18px] px-4 py-3.5" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-                  <div className="text-[var(--color-muted)] text-[13px] font-bold mb-1.5">{isGambling ? "🎰 已下注人次" : "目前參加人數"}</div>
-                  <div className="text-[24px] font-extrabold text-[var(--color-primary-dark)]">{stats.total}</div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3.5">
+                <div className="border shadow-[0_8px_20px_rgba(120,93,200,.08)] rounded-[16px] sm:rounded-[18px] px-2.5 py-3 sm:px-4 sm:py-3.5 text-center sm:text-left" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+                  <div className="text-[var(--color-muted)] text-[11px] sm:text-[13px] font-bold mb-1 sm:mb-1.5 break-all">{isGambling ? "🎰 總下注人次" : "目前參加人數"}</div>
+                  <div className="text-[18px] sm:text-[24px] font-extrabold text-[var(--color-primary-dark)]">{stats.total}</div>
                 </div>
-                <div className="min-w-[140px] border shadow-[0_10px_24px_rgba(120,93,200,.1)] rounded-[18px] px-4 py-3.5" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-                  <div className="text-[var(--color-muted)] text-[13px] font-bold mb-1.5">{isGambling ? "💙 押注男寶金" : "男寶票數"}</div>
-                  <div className="text-[24px] font-extrabold text-[var(--color-primary-dark)]">{isGambling ? `${stats.boy * 1000} 萬` : stats.boy}</div>
+                <div className="border shadow-[0_8px_20px_rgba(120,93,200,.08)] rounded-[16px] sm:rounded-[18px] px-2.5 py-3 sm:px-4 sm:py-3.5 text-center sm:text-left" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+                  <div className="text-[var(--color-muted)] text-[11px] sm:text-[13px] font-bold mb-1 sm:mb-1.5 break-all">{isGambling ? "💙 押注男寶金" : "男寶票數"}</div>
+                  <div className="text-[18px] sm:text-[24px] font-extrabold text-[var(--color-primary-dark)]">{isGambling ? `${stats.boy * 1000} 萬` : stats.boy}</div>
                 </div>
-                <div className="min-w-[140px] border shadow-[0_10px_24px_rgba(120,93,200,.1)] rounded-[18px] px-4 py-3.5" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-                  <div className="text-[var(--color-muted)] text-[13px] font-bold mb-1.5">{isGambling ? "💖 押注女寶金" : "女寶票數"}</div>
-                  <div className="text-[24px] font-extrabold text-[var(--color-primary-dark)]">{isGambling ? `${stats.girl * 1000} 萬` : stats.girl}</div>
+                <div className="border shadow-[0_8px_20px_rgba(120,93,200,.08)] rounded-[16px] sm:rounded-[18px] px-2.5 py-3 sm:px-4 sm:py-3.5 text-center sm:text-left" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+                  <div className="text-[var(--color-muted)] text-[11px] sm:text-[13px] font-bold mb-1 sm:mb-1.5 break-all">{isGambling ? "💖 押注女寶金" : "女寶票數"}</div>
+                  <div className="text-[18px] sm:text-[24px] font-extrabold text-[var(--color-primary-dark)]">{isGambling ? `${stats.girl * 1000} 萬` : stats.girl}</div>
                 </div>
               </div>
             </div>
 
-            <div className="min-h-[360px] lg:min-h-[400px] flex items-center justify-center relative">
+            <div className="min-h-[300px] sm:min-h-[360px] lg:min-h-[400px] flex items-center justify-center relative">
               <div className="w-[min(100%,430px)] aspect-square rounded-[32px] border border-[var(--color-glass-border,rgba(255,255,255,0.85))] shadow-[var(--shadow-custom)] flex items-center justify-center relative overflow-hidden" style={{ background: 'var(--color-card-grad)' }}>
-                <div className="absolute px-3.5 py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[20px] top-[36px]">
-                  {isGambling ? "💙 男寶 (賠率 1.95)" : "💙 Team Boy?"}
+                <div className="absolute px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[11px] sm:text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[15px] sm:left-[20px] top-[25px] sm:top-[36px]">
+                  {isGambling ? "💙 男寶 (1.95)" : "💙 Team Boy?"}
                 </div>
-                <div className="absolute px-3.5 py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[18px] top-[72px] [animation-delay:1s]">
-                  {isGambling ? "💖 女寶 (賠率 1.95)" : "💖 Team Girl?"}
+                <div className="absolute px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[11px] sm:text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[15px] sm:right-[18px] top-[55px] sm:top-[72px] [animation-delay:1s]">
+                  {isGambling ? "💖 女寶 (1.95)" : "💖 Team Girl?"}
                 </div>
-                <div className="absolute px-3.5 py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[28px] bottom-[40px] [animation-delay:2s]">
-                  {isGambling ? "🎰 免費投注賺大禮" : "🎀 Baby is coming"}
+                <div className="absolute px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[11px] sm:text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] left-[20px] sm:left-[28px] bottom-[30px] sm:bottom-[40px] [animation-delay:2s]">
+                  {isGambling ? "🎰 免費下注" : "🎀 Baby is coming"}
                 </div>
-                <div className="absolute px-3.5 py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[24px] bottom-[76px] [animation-delay:1.4s]">
-                  {isGambling ? "💎 極速自動結算派彩" : "🧸 Guess & Win"}
+                <div className="absolute px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[11px] sm:text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[18px] sm:right-[24px] bottom-[55px] sm:bottom-[76px] [animation-delay:1.4s]">
+                  {isGambling ? "💎 自動結算派彩" : "🧸 Guess & Win"}
                 </div>
                 <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden">
                   <img src={babyImage} alt="Baby" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -408,22 +464,22 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-6">
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.days}</div>
-              <div className="text-[var(--color-muted)] text-sm font-bold">天</div>
+          <div className="grid grid-cols-4 gap-2.5 sm:gap-4 mt-6 max-w-2xl mx-auto">
+            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.days}</div>
+              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">天</div>
             </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.hours}</div>
-              <div className="text-[var(--color-muted)] text-sm font-bold">小時</div>
+            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.hours}</div>
+              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">小時</div>
             </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.minutes}</div>
-              <div className="text-[var(--color-muted)] text-sm font-bold">分鐘</div>
+            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.minutes}</div>
+              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">分鐘</div>
             </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] px-3.5 py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-[clamp(28px,5vw,34px)] font-extrabold mb-2">{timeLeft.seconds}</div>
-              <div className="text-[var(--color-muted)] text-sm font-bold">秒</div>
+            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.seconds}</div>
+              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">秒</div>
             </div>
           </div>
         </section>
@@ -727,6 +783,238 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             </div>
           </div>
         </section>
+
+        {(siteConfig.actualGender || (currentUser && currentUser.email === 'user@gmail.com')) && (
+          <section id="reveal" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10 scroll-mt-6">
+            <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 md:p-10 text-center relative overflow-hidden" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              
+              {/* Header Title */}
+              <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold mb-5">
+                {isGambling ? "🎰 澳門現場即時派彩盤口 👑" : "🎉 期待已久的揭曉時刻 👶"}
+              </div>
+              <h2 className="text-[28px] sm:text-[36px] font-extrabold text-[var(--color-primary-dark)] mb-6">
+                {isGambling ? "威尼斯人・寶寶性別開獎大廳" : "寶寶性別正式揭曉與幸運抽獎"}
+              </h2>
+
+              {/* Phase 1: Gender Reveal Container */}
+              <div className="max-w-2xl mx-auto mb-10">
+                {revealState === 'initial' && (
+                  <div className="bg-white/5 dark:bg-slate-900/40 border border-dashed border-[rgba(140,111,232,.3)] rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px]">
+                    {/* Pulsing secret egg */}
+                    <div className="w-[120px] sm:w-[150px] aspect-square rounded-full bg-gradient-to-tr from-[#90caf9] via-[#e1bee7] to-[#f48fb1] flex items-center justify-center text-[50px] sm:text-[64px] animate-bounce shadow-xl relative border-4 border-white dark:border-slate-800">
+                      ❓
+                      <div className="absolute inset-0 rounded-full animate-ping bg-indigo-500/10" />
+                    </div>
+                    <h3 className="text-xl font-extrabold text-[var(--color-primary-dark)] mt-6 mb-2">
+                      {isGambling ? "🎲 莊家已完成性別封盤確認！" : "✨ 性別結果已經送達！"}
+                    </h3>
+                    <p className="text-[var(--color-muted)] text-sm font-medium mb-6 leading-relaxed">
+                      點擊下方按鈕開始倒數並進行戲劇性開獎揭曉！
+                    </p>
+                    <button 
+                      onClick={handleStartReveal}
+                      className="px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-[#8c6fe8] to-[#b49bff] hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer"
+                    >
+                      🔮 點擊開始揭曉寶寶性別 ⚡
+                    </button>
+                  </div>
+                )}
+
+                {revealState === 'revealing' && (
+                  <div className="bg-white/5 dark:bg-slate-900/40 border border-[rgba(140,111,232,.2)] rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px] overflow-hidden relative">
+                    {/* Flashing Lightbox Background */}
+                    <div className={`absolute inset-0 opacity-10 transition-colors duration-75 ${revealedGenderFlashing === '男寶' ? 'bg-blue-500' : 'bg-pink-500'}`} />
+                    
+                    {/* Spinning capsule */}
+                    <div className={`w-[120px] sm:w-[150px] aspect-square rounded-full flex items-center justify-center text-[50px] sm:text-[64px] shadow-2xl relative border-4 border-white dark:border-slate-800 animate-spin transition-all ${
+                      revealedGenderFlashing === '男寶' ? 'bg-gradient-to-br from-blue-300 to-blue-500 text-blue-100' : 'bg-gradient-to-br from-pink-300 to-pink-500 text-pink-100'
+                    }`}>
+                      {revealedGenderFlashing === '男寶' ? "💙" : "💖"}
+                    </div>
+
+                    <h3 className="text-lg sm:text-xl font-extrabold text-[var(--color-primary-dark)] mt-6 mb-2 animate-pulse">
+                      {isGambling ? "🎰 萬眾矚目！自動結算核對中..." : "🤫 屏息以待！答案即將揭曉..."}
+                    </h3>
+                    <div className="w-48 bg-gray-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden mt-3">
+                      <div className="bg-gradient-to-r from-blue-400 to-pink-400 h-full animate-[loading-bar_3s_linear_infinite]" style={{ width: '100%' }} />
+                    </div>
+                  </div>
+                )}
+
+                {revealState === 'revealed' && (
+                  <div className="animate-[scaleUp_0.5s_ease-out_forwards]">
+                    {/* Custom Confetti Layer */}
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                      {[...Array(12)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={`absolute rounded-full animate-[floatY_5s_ease-in-out_infinite] opacity-60 ${
+                            siteConfig.actualGender === '男寶' ? 'bg-blue-300/30 text-blue-500' : 'bg-pink-300/30 text-pink-500'
+                          }`}
+                          style={{
+                            width: `${Math.random() * 20 + 10}px`,
+                            height: `${Math.random() * 20 + 10}px`,
+                            left: `${Math.random() * 90 + 5}%`,
+                            top: `${Math.random() * 90 + 5}%`,
+                            animationDelay: `${Math.random() * 3}s`,
+                            animationDuration: `${Math.random() * 4 + 4}s`
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <div className={`rounded-3xl p-8 border-2 shadow-2xl flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden ${
+                      siteConfig.actualGender === '男寶' 
+                        ? 'bg-blue-50/70 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50' 
+                        : 'bg-pink-50/70 dark:bg-pink-950/20 border-pink-200 dark:border-pink-900/50'
+                    }`}>
+                      <div className="text-[64px] sm:text-[80px] animate-bounce mb-4">
+                        {siteConfig.actualGender === '男寶' ? "👶💙" : "👶💖"}
+                      </div>
+                      <div className="text-sm font-extrabold text-[var(--color-muted)] mb-1 uppercase tracking-widest">正式開獎結果</div>
+                      <h3 className={`text-3xl sm:text-5xl font-black mb-4 tracking-wider ${
+                        siteConfig.actualGender === '男寶' ? 'text-blue-600 dark:text-blue-400' : 'text-pink-600 dark:text-pink-400'
+                      }`}>
+                        恭喜！是個 {siteConfig.actualGender || "揭曉中"}！
+                      </h3>
+                      <p className="text-[var(--color-text)] max-w-md text-sm sm:text-base font-semibold leading-relaxed mb-6">
+                        {siteConfig.actualGender === '男寶' 
+                          ? (isGambling ? "🎰 買中藍方【男寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【男寶】的親朋好友們，你們太厲害、太神準了！🎉")
+                          : (isGambling ? "🎰 買中紅方【女寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【女寶】的親朋好友們，你們太厲害、太神準了！🎉")
+                        }
+                      </p>
+
+                      <div className="flex gap-3 flex-wrap justify-center">
+                        <button 
+                          onClick={() => setRevealState('initial')}
+                          className="px-4.5 py-2.5 rounded-full text-xs font-bold border border-[rgba(140,111,232,.25)] text-[var(--color-muted)] hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                        >
+                          🎬 重新播放開獎特效
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Phase 2: Correct Guessers & Lucky Draw Carousel */}
+              {revealState === 'revealed' && (
+                <div className="animate-[fadeIn_0.6s_ease-out_forwards] border-t border-[rgba(140,111,232,.15)] pt-8 mt-4 text-left">
+                  
+                  {/* Correct Guessers List */}
+                  <div className="mb-8">
+                    <h4 className="text-base sm:text-lg font-extrabold text-[var(--color-primary-dark)] mb-4 flex items-center gap-2">
+                      <span>🎯</span> 
+                      <span>猜中正確性別的玩家名單 ({guesses.filter(g => g.gender === siteConfig.actualGender).length} 人)：</span>
+                    </h4>
+                    {guesses.filter(g => g.gender === siteConfig.actualGender).length === 0 ? (
+                      <p className="text-[var(--color-muted)] text-sm font-semibold italic">目前沒有人猜中這個性別喔 🧩</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto p-4 bg-white/10 dark:bg-slate-900/50 border border-[var(--color-glass-border)] rounded-2xl">
+                        {guesses.filter(g => g.gender === siteConfig.actualGender).map((g) => (
+                          <div key={g.id} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-800 border border-[var(--color-glass-border)] text-[var(--color-primary-dark)] shadow-sm flex items-center gap-1.5">
+                            <span>👶</span>
+                            <span>{g.name}</span>
+                            <span className="text-[10px] opacity-60 font-mono">({g.relation})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lucky Winner Drawer */}
+                  <div className="border border-[var(--color-glass-border)] rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[var(--color-glass-bg)] to-white/5 shadow-inner">
+                    <div className="text-center max-w-xl mx-auto">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-extrabold bg-yellow-100 text-yellow-700 border border-yellow-200 mb-4 animate-pulse">
+                        🎁 LUCKY DRAW TIME 🎁
+                      </div>
+                      <h4 className="text-xl sm:text-2xl font-black text-[var(--color-primary-dark)] mb-2">幸運得主大抽獎</h4>
+                      <p className="text-[var(--color-muted)] text-xs sm:text-sm font-semibold leading-relaxed mb-6">
+                        得獎結果同步讀取自主辦人在後台隨機抽選、完全公平公正的幸運名單！
+                      </p>
+
+                      {/* Display Slot Machine Frame */}
+                      {drawState === 'ready' && (
+                        <div className="bg-white/10 dark:bg-slate-900/60 border border-[var(--color-glass-border)] rounded-2xl p-6 mb-6">
+                          <div className="text-[36px] sm:text-[48px] filter saturate-50 animate-pulse mb-3">🎰</div>
+                          <p className="text-[var(--color-muted)] text-sm font-extrabold mb-4">準備好揭曉幸運得獎者了嗎？點擊下方按鈕啟動轉輪！</p>
+                          <button 
+                            onClick={handleStartDraw}
+                            disabled={!siteConfig.winners || siteConfig.winners.length === 0}
+                            className={`px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer ${
+                              (!siteConfig.winners || siteConfig.winners.length === 0) ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''
+                            }`}
+                          >
+                            🎰 開始抽取幸運得主 🎁
+                          </button>
+                          {(!siteConfig.winners || siteConfig.winners.length === 0) && (
+                            <p className="text-xs text-red-500 font-bold mt-2.5">
+                              ⚠️ 主辦人尚未在後台完成隨機抽獎，暫時無法啟動開獎機。請靜待通知！
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {drawState === 'drawing' && (
+                        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-4 border-yellow-400 rounded-2xl p-8 mb-6 shadow-2xl relative overflow-hidden animate-[pulse_1s_infinite]">
+                          <div className="absolute inset-0 bg-[linear-gradient(rgba(234,179,8,0.1)_2px,transparent_2px)] bg-[size:100%_24px] pointer-events-none" />
+                          <div className="text-yellow-400 text-xs font-mono tracking-widest uppercase mb-2 animate-pulse">● SPINNER ACTIVE</div>
+                          <div className="text-3xl sm:text-5xl font-black text-white font-mono tracking-wider animate-bounce">
+                            {rollingName || "???"}
+                          </div>
+                          <p className="text-indigo-200/80 text-xs font-bold mt-4 animate-pulse">正在核對全場對中盤口數據，計算極致好運得主...</p>
+                        </div>
+                      )}
+
+                      {drawState === 'done' && (
+                        <div>
+                          <div className="bg-gradient-to-r from-amber-50/60 to-yellow-50/60 dark:from-yellow-950/10 dark:to-slate-900/50 border-2 border-yellow-300 dark:border-yellow-900/50 rounded-2xl p-6 sm:p-8 mb-6 shadow-xl text-center">
+                            <div className="text-5xl mb-4 animate-bounce">👑</div>
+                            <h5 className="text-2xl font-extrabold text-amber-700 dark:text-amber-400 mb-4">🏆 恭喜以下幸運中獎者 🏆</h5>
+                            
+                            <div className="grid gap-4 max-w-lg mx-auto">
+                              {(!siteConfig.winners || siteConfig.winners.length === 0) ? (
+                                <p className="text-[var(--color-muted)] text-sm font-semibold italic">暫無得獎者數據 📭</p>
+                              ) : (
+                                siteConfig.winners.map((item, idx) => (
+                                  <div key={item.id || idx} className="bg-white dark:bg-slate-800 border border-yellow-200 dark:border-yellow-900/40 rounded-xl p-4 text-left shadow-sm">
+                                    <div className="flex justify-between items-start gap-2 border-b border-gray-100 dark:border-slate-700 pb-2 mb-2">
+                                      <strong className="text-base text-[var(--color-primary-dark)]">
+                                        🎉 特等獎得主 {idx + 1}：{item.name}
+                                      </strong>
+                                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 font-mono">
+                                        {item.relation}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-[var(--color-muted)] leading-relaxed space-y-1 font-medium">
+                                      <div>📞 聯絡方式：{item.contact}</div>
+                                      <div>🎁 期望禮物：{item.giftWish || "—"}</div>
+                                      <div className="italic text-gray-500 mt-1">✍️ 祝福留言："{item.wish || "祝寶寶健康平安"}"</div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            <button 
+                              onClick={() => setDrawState('ready')}
+                              className="mt-6 px-5 py-2.5 rounded-full text-xs font-extrabold border border-yellow-300 dark:border-yellow-900 text-amber-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20 transition-all cursor-pointer"
+                            >
+                              🎬 重新播放抽獎轉輪
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">

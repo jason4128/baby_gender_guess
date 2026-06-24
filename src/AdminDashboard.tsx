@@ -97,6 +97,9 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
           actualGender: data.actualGender || prev.actualGender,
           winnerCount: data.winnerCount || prev.winnerCount
         }));
+        if (data.winners) {
+          setWinners(data.winners);
+        }
       }
 
       const guessesSnap = await getDocs(collection(db, "guesses"));
@@ -293,10 +296,24 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
       if (iterations >= maxIterations) {
         clearInterval(animInterval);
         const shuffled = [...correct].sort(() => 0.5 - Math.random());
-        setWinners(shuffled.slice(0, Math.min(siteConfig.winnerCount, correct.length)));
+        const drawn = shuffled.slice(0, Math.min(siteConfig.winnerCount, correct.length));
+        setWinners(drawn);
+        
+        // Save to Firestore
+        setDoc(doc(db, "settings", "siteConfig"), {
+          ...siteConfig,
+          winners: drawn
+        }, { merge: true })
+        .then(() => {
+          showToast('success', "已成功隨機抽出幸運中獎者，並儲存至雲端！");
+        })
+        .catch(err => {
+          console.error("Save winners failed:", err);
+          showToast('error', "儲存中獎者至雲端失敗！");
+        });
+
         setCurrentAnimGuess(null);
         setDrawAnimating(false);
-        showToast('success', "已成功隨機抽出幸運中獎者！");
       }
     }, intervalTime);
   };

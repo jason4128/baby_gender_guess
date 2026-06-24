@@ -11,7 +11,7 @@ import { themes } from './themes';
 
 export default function App() {
   const [themeId, setThemeId] = useState(() => {
-    return localStorage.getItem('baby_gender_theme_id') || 'lavender';
+    return localStorage.getItem('baby_gender_theme_id') || 'milktea';
   });
 
   useEffect(() => {

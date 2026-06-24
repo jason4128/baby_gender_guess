@@ -5,6 +5,10 @@ import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp
 import { SiteConfig, Guess } from './types';
 // @ts-ignore
 import babyImage from './assets/images/baby_whale_avatar_1782203089696.jpg';
+// @ts-ignore
+import babyBoyIcon from './assets/images/baby_boy_icon_1782268085326.jpg';
+// @ts-ignore
+import babyGirlIcon from './assets/images/baby_girl_icon_1782268101031.jpg';
 import { themes } from './themes';
 
 interface MainSiteProps {
@@ -215,29 +219,9 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 {isGambling ? ['下注規則', '封盤倒數', '立即投注', '派彩福利'][i] : label}
               </button>
             ))}
-            <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)] mr-1">
+            <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
               管理後台
             </Link>
-            <div className="relative inline-flex items-center">
-              <span className="text-xs font-extrabold text-[var(--color-muted)] mr-1.5 hidden sm:inline">🎨 切換配色：</span>
-              <div className="relative">
-                <select
-                  value={themeId}
-                  onChange={(e) => setThemeId(e.target.value)}
-                  className="appearance-none bg-white text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.18)] hover:border-[var(--color-primary)] px-3 py-1.5 pr-7 rounded-full text-xs font-bold shadow-sm focus:outline-none cursor-pointer transition-all"
-                  style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)' }}
-                >
-                  {themes.map(t => (
-                    <option key={t.id} value={t.id} className="text-black bg-white">
-                      {t.emoji} {t.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-primary-dark)] text-[9px] opacity-70">
-                  ▼
-                </div>
-              </div>
-            </div>
           </nav>
         </div>
       </header>
@@ -428,14 +412,30 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4.5">
                 <label className={`relative rounded-[24px] px-[18px] py-[22px] min-h-[210px] cursor-pointer transition-all border-2 flex flex-col justify-between overflow-hidden ${
-                  isGambling 
-                    ? 'bg-slate-950/80 border-sky-500/30 text-white hover:border-sky-400' 
-                    : 'bg-gradient-to-b from-[rgba(207,231,255,.65)] to-[rgba(255,255,255,.88)]'
-                } ${formData.gender === '男寶' ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] shadow-[0_18px_34px_rgba(120,93,200,.18)] -translate-y-1' : 'border-transparent hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(120,93,200,.12)]'}`}>
+                  themeId === 'milktea'
+                    ? `bg-gradient-to-b from-[#fdfbf9] to-[#f5ebe2] text-[#524339] ${
+                        formData.gender === '男寶' 
+                          ? 'border-[#b08e72] ring-2 ring-[#b08e72] shadow-[0_18px_34px_rgba(176,142,114,0.22)] -translate-y-1' 
+                          : 'border-[#eedac5] hover:border-[#b08e72] hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(176,142,114,0.12)]'
+                      }`
+                    : isGambling 
+                    ? `bg-slate-950/80 text-white ${
+                        formData.gender === '男寶'
+                          ? 'border-sky-400 ring-2 ring-sky-400 shadow-[0_18px_34px_rgba(14,165,233,0.3)] -translate-y-1'
+                          : 'border-sky-500/30 hover:border-sky-400 hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(14,165,233,0.15)]'
+                      }`
+                    : `bg-gradient-to-b from-[rgba(207,231,255,.65)] to-[rgba(255,255,255,.88)] text-[var(--color-text)] ${
+                        formData.gender === '男寶'
+                          ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] shadow-[0_18px_34px_rgba(120,93,200,.18)] -translate-y-1'
+                          : 'border-transparent hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(120,93,200,.12)]'
+                      }`
+                }`}>
                   <input type="radio" name="gender" value="男寶" className="hidden" checked={formData.gender === '男寶'} onChange={handleInputChange} />
                   <div>
                     <div className="flex justify-between items-center mb-3.5">
-                      <div className="text-[34px]">💙</div>
+                      <div className="w-[68px] h-[68px] sm:w-[76px] sm:h-[76px] rounded-2xl overflow-hidden border-2 border-sky-400/40 shadow-sm bg-white/20">
+                        <img src={babyBoyIcon} alt="寶寶男孩" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
                       <div className="bg-white/80 dark:bg-slate-800 text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">
                         {isGambling ? "賠率 1.95" : "Team Boy"}
                       </div>
@@ -450,14 +450,30 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </label>
 
                 <label className={`relative rounded-[24px] px-[18px] py-[22px] min-h-[210px] cursor-pointer transition-all border-2 flex flex-col justify-between overflow-hidden ${
-                  isGambling 
-                    ? 'bg-slate-950/80 border-pink-500/30 text-white hover:border-pink-400' 
-                    : 'bg-gradient-to-b from-[rgba(255,200,231,.58)] to-[rgba(255,255,255,.88)]'
-                } ${formData.gender === '女寶' ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] shadow-[0_18px_34px_rgba(120,93,200,.18)] -translate-y-1' : 'border-transparent hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(120,93,200,.12)]'}`}>
+                  themeId === 'milktea'
+                    ? `bg-gradient-to-b from-[#fdfbf9] to-[#f5ebe2] text-[#524339] ${
+                        formData.gender === '女寶' 
+                          ? 'border-[#b08e72] ring-2 ring-[#b08e72] shadow-[0_18px_34px_rgba(176,142,114,0.22)] -translate-y-1' 
+                          : 'border-[#eedac5] hover:border-[#b08e72] hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(176,142,114,0.12)]'
+                      }`
+                    : isGambling 
+                    ? `bg-slate-950/80 text-white ${
+                        formData.gender === '女寶'
+                          ? 'border-pink-400 ring-2 ring-pink-400 shadow-[0_18px_34px_rgba(236,72,153,0.3)] -translate-y-1'
+                          : 'border-pink-500/30 hover:border-pink-400 hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(236,72,153,0.15)]'
+                      }`
+                    : `bg-gradient-to-b from-[rgba(255,200,231,.58)] to-[rgba(255,255,255,.88)] text-[var(--color-text)] ${
+                        formData.gender === '女寶'
+                          ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] shadow-[0_18px_34px_rgba(120,93,200,.18)] -translate-y-1'
+                          : 'border-transparent hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(120,93,200,.12)]'
+                      }`
+                }`}>
                   <input type="radio" name="gender" value="女寶" className="hidden" checked={formData.gender === '女寶'} onChange={handleInputChange} />
                   <div>
                     <div className="flex justify-between items-center mb-3.5">
-                      <div className="text-[34px]">💖</div>
+                      <div className="w-[68px] h-[68px] sm:w-[76px] sm:h-[76px] rounded-2xl overflow-hidden border-2 border-pink-400/40 shadow-sm bg-white/20">
+                        <img src={babyGirlIcon} alt="寶寶女孩" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
                       <div className="bg-white/80 dark:bg-slate-800 text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">
                         {isGambling ? "賠率 1.95" : "Team Girl"}
                       </div>
@@ -472,18 +488,32 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </label>
               </div>
 
-              <div className="mt-4.5 border border-[rgba(140,111,232,.15)] rounded-[18px] p-4 bg-black/10 dark:bg-black/30 backdrop-blur-sm">
+              <div className={`mt-4.5 border rounded-[18px] p-4 backdrop-blur-sm ${
+                themeId === 'milktea'
+                  ? 'border-[#eedac5] bg-white/50'
+                  : 'border-[rgba(140,111,232,.15)] bg-black/10 dark:bg-black/30'
+              }`}>
                 <div className="flex justify-between gap-2.5 mb-3 text-[var(--color-primary-dark)] text-sm font-extrabold">
                   <span>{isGambling ? "📈 兩側池子投注比例" : "目前投票比例"}</span>
                   <span>男寶 {boyPercent}% / 女寶 {girlPercent}%</span>
                 </div>
-                <div className="h-[14px] bg-[#f0e9ff] dark:bg-slate-850 rounded-full overflow-hidden flex">
+                <div className={`h-[14px] rounded-full overflow-hidden flex ${
+                  themeId === 'milktea' ? 'bg-[#f5ebe2]' : 'bg-[#f0e9ff] dark:bg-slate-850'
+                }`}>
                   <div className="h-full bg-gradient-to-r from-[#00bfff] to-[#00f0ff] transition-all duration-300" style={{ width: `${boyPercent}%` }}></div>
                   <div className="h-full bg-gradient-to-r from-[#ff007f] to-[#ff66b2] transition-all duration-300" style={{ width: `${girlPercent}%` }}></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  <div className="bg-white/10 dark:bg-slate-900/60 rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)] border border-sky-500/20">💙 男寶總押注量：<span>{isGambling ? `${stats.boy * 1000} 萬` : stats.boy}</span></div>
-                  <div className="bg-white/10 dark:bg-slate-900/60 rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)] border border-pink-500/20">💖 女寶總押注量：<span>{isGambling ? `${stats.girl * 1000} 萬` : stats.girl}</span></div>
+                  <div className={`rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)] border ${
+                    themeId === 'milktea' 
+                      ? 'bg-white/60 border-[#eedac5]' 
+                      : 'bg-white/10 dark:bg-slate-900/60 border-sky-500/20'
+                  }`}>💙 男寶總押注量：<span>{isGambling ? `${stats.boy * 1000} 萬` : stats.boy}</span></div>
+                  <div className={`rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)] border ${
+                    themeId === 'milktea' 
+                      ? 'bg-white/60 border-[#eedac5]' 
+                      : 'bg-white/10 dark:bg-slate-900/60 border-pink-500/20'
+                  }`}>💖 女寶總押注量：<span>{isGambling ? `${stats.girl * 1000} 萬` : stats.girl}</span></div>
                 </div>
               </div>
             </div>
@@ -598,7 +628,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
         </section>
 
         <section id="gift" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
-          <div className="relative mt-[18px] text-white rounded-[30px] shadow-[0_18px_40px_rgba(109,80,207,.28)] p-[30px] overflow-hidden after:content-[''] after:absolute after:w-[220px] after:h-[220px] after:rounded-full after:bg-white/10 after:-right-[60px] after:-top-[60px] before:content-[''] before:absolute before:w-[160px] before:h-[160px] before:rounded-full before:bg-white/10 before:-left-[30px] before:-bottom-[60px]" style={{ background: isGambling ? 'linear-gradient(135deg, #1e1b4b, #311042)' : 'linear-gradient(135deg, #8c6fe8, #b49bff)' }}>
+          <div className="relative mt-[18px] text-white rounded-[30px] shadow-[0_18px_40px_rgba(109,80,207,.28)] p-[30px] overflow-hidden after:content-[''] after:absolute after:w-[220px] after:h-[220px] after:rounded-full after:bg-white/10 after:-right-[60px] after:-top-[60px] before:content-[''] before:absolute before:w-[160px] before:h-[160px] before:rounded-full before:bg-white/10 before:-left-[30px] before:-bottom-[60px]" style={{ background: themeId === 'milktea' ? 'linear-gradient(135deg, #b08e72, #d1b49a)' : (isGambling ? 'linear-gradient(135deg, #1e1b4b, #311042)' : 'linear-gradient(135deg, #8c6fe8, #b49bff)') }}>
             <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.1fr_.9fr] gap-6 items-center">
               <div>
                 <h3 className="text-[30px] mb-3 font-bold">

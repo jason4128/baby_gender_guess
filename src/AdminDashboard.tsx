@@ -208,25 +208,6 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
           </p>
         </div>
         <div className="flex gap-3 flex-wrap items-center">
-          <div className="relative inline-flex items-center">
-            <span className="text-xs font-extrabold text-[var(--color-muted)] mr-1.5 hidden sm:inline">🎨 配色盤口：</span>
-            <div className="relative">
-              <select
-                value={themeId}
-                onChange={(e) => setThemeId(e.target.value)}
-                className="appearance-none bg-white dark:bg-slate-900 text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.18)] hover:border-[var(--color-primary)] px-3 py-1.5 pr-7 rounded-full text-xs font-bold shadow-sm focus:outline-none cursor-pointer transition-all"
-              >
-                {themes.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.emoji} {t.name}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-primary-dark)] text-[9px] opacity-70">
-                ▼
-              </div>
-            </div>
-          </div>
           <a href="#/" className="bg-white dark:bg-slate-900 text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.12)] px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-sm no-underline">回首頁</a>
           <button onClick={loadData} className="bg-white dark:bg-slate-900 text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.12)] px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-sm">重新整理資料</button>
           <button onClick={exportCSV} className="bg-gradient-to-br from-[var(--color-primary)] to-[#aa91ff] text-white shadow-[0_12px_26px_rgba(140,111,232,.25)] px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform">匯出 CSV</button>

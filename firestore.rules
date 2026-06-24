@@ -8,5 +8,8 @@ service cloud.firestore {
     match /guesses/{document} {
       allow read, write: if true;
     }
+    match /inviteCodes/{document} {
+      allow read, write: if true;
+    }
   }
 }

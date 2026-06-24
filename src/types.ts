@@ -1,10 +1,15 @@
 export interface SiteConfig {
-  eventTitle: string;
-  eventSubtitle: string;
   closeTime: string;
   isVotingOpen: boolean;
   actualGender: string;
   winnerCount: number;
+}
+
+export interface InviteCode {
+  id: string; // The code itself
+  used: boolean;
+  usedBy?: string; // name of the user who used it
+  createdAt: any;
 }
 
 export interface Guess {
@@ -15,5 +20,6 @@ export interface Guess {
   wish: string;
   giftWish: string;
   relation: string;
+  inviteCode?: string;
   createdAt: any; // Firestore timestamp
 }

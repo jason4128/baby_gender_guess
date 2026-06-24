@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { db } from './firebase';
-import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from './firebase';
+import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { SiteConfig, Guess } from './types';
 // @ts-ignore
 import babyImage from './assets/images/baby_whale_avatar_1782203089696.jpg';
@@ -18,9 +19,16 @@ interface MainSiteProps {
 
 export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const isGambling = themeId.startsWith('casino') || themeId === 'milktea';
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [siteConfig, setSiteConfig] = useState<SiteConfig>({
-    eventTitle: "猜猜我們的小寶寶\n是男寶還是女寶 💜",
-    eventSubtitle: "我們想把迎接寶寶的喜悅分享給每一位家人朋友～在正式揭曉前，先來玩一個小小的猜謎活動吧！猜對的人將有機會獲得小禮物 🎁",
     closeTime: "2026-08-30T23:59:59",
     isVotingOpen: true,
     actualGender: "",
@@ -41,7 +49,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
     contact: '',
     wish: '',
     giftWish: '',
-    relation: ''
+    relation: '',
+    inviteCode: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{type: 'success'|'error', text: React.ReactNode} | null>(null);
@@ -51,7 +60,14 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
       const ref = doc(db, "settings", "siteConfig");
       const snap = await getDoc(ref);
       if (snap.exists()) {
-        setSiteConfig(prev => ({ ...prev, ...snap.data() as SiteConfig }));
+        const data = snap.data();
+        setSiteConfig(prev => ({ 
+          ...prev, 
+          closeTime: data.closeTime || prev.closeTime,
+          isVotingOpen: data.isVotingOpen ?? prev.isVotingOpen,
+          actualGender: data.actualGender || prev.actualGender,
+          winnerCount: data.winnerCount || prev.winnerCount
+        }));
       }
     } catch (error) {
       console.error("載入設定失敗", error);
@@ -132,8 +148,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
       return;
     }
 
-    if (!formData.name.trim() || !formData.contact.trim()) {
-      setSubmitMessage({ type: 'error', text: "請填寫姓名 / 暱稱與聯絡方式。" });
+    if (!formData.name.trim() || !formData.contact.trim() || !formData.inviteCode.trim()) {
+      setSubmitMessage({ type: 'error', text: "請填寫姓名 / 聯絡方式 / 邀請碼。" });
       return;
     }
 
@@ -141,6 +157,23 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
     setSubmitMessage(null);
 
     try {
+      const codeStr = formData.inviteCode.trim().toUpperCase();
+      const codeRef = doc(db, "inviteCodes", codeStr);
+      const codeSnap = await getDoc(codeRef);
+
+      if (!codeSnap.exists()) {
+        setSubmitMessage({ type: 'error', text: "無效的邀請碼，請確認後再試。" });
+        setSubmitting(false);
+        return;
+      }
+
+      const codeData = codeSnap.data();
+      if (codeData.used) {
+        setSubmitMessage({ type: 'error', text: "此邀請碼已被使用過囉！" });
+        setSubmitting(false);
+        return;
+      }
+
       const q = query(collection(db, "guesses"), where("contact", "==", formData.contact.trim()));
       const snap = await getDocs(q);
       
@@ -152,8 +185,14 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
       await addDoc(collection(db, "guesses"), {
         ...formData,
+        inviteCode: codeStr,
         createdAt: serverTimestamp()
       });
+
+      await setDoc(codeRef, {
+        used: true,
+        usedBy: formData.name.trim()
+      }, { merge: true });
 
       setSubmitMessage({
         type: 'success', 
@@ -172,7 +211,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
         contact: '',
         wish: '',
         giftWish: '',
-        relation: ''
+        relation: '',
+        inviteCode: ''
       });
       
       await loadVoteStats();
@@ -219,9 +259,15 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 {isGambling ? ['下注規則', '封盤倒數', '立即投注', '派彩福利'][i] : label}
               </button>
             ))}
-            <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
-              管理後台
-            </Link>
+            {currentUser && currentUser.email === 'user@gmail.com' ? (
+              <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-sm px-3.5 py-2.5 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+                管理後台
+              </Link>
+            ) : (
+              <Link to="/admin" className="no-underline text-white font-extrabold text-xs px-4 py-2.5 rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[#b49bff] hover:opacity-90 active:scale-95 transition-all shadow-md">
+                🔑 登入
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -234,10 +280,10 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 {isGambling ? "🔥 全台最大盤口熱烈開盤中・買定離手！" : "✨ 一起來猜猜看，寶寶到底是男生還是女生？"}
               </div>
               <h1 className="text-[clamp(32px,5vw,56px)] leading-[1.12] text-[var(--color-primary-dark)] mb-3.5 font-extrabold whitespace-pre-line">
-                {isGambling ? "🎰 2026年全球最火爆！\n寶寶性別預測競猜娛樂城 💸" : siteConfig.eventTitle}
+                {isGambling ? "🎰 2026年全球最火爆！\n寶寶性別預測競猜娛樂城 💸" : "猜猜我們的小寶寶\n是男寶還是女寶 💜"}
               </h1>
               <p className="text-[var(--color-muted)] leading-[1.9] text-base mb-6">
-                {isGambling ? "【賠率全新升級：1 賠 1.95】支持心中所屬陣營，不需儲值，填寫祝福直接免費領取下注金！猜對在性別正式揭曉派彩日即有機會抽出極奢大禮！🎁" : siteConfig.eventSubtitle}
+                {isGambling ? "【賠率全新升級：1 賠 1.95】支持心中所屬陣營，不需儲值，填寫祝福直接免費領取下注金！猜對在性別正式揭曉派彩日即有機會抽出極奢大禮！🎁" : "我們想把迎接寶寶的喜悅分享給每一位家人朋友～在正式揭曉前，先來玩一個小小的猜謎活動吧！猜對的人將有機會獲得小禮物 🎁"}
               </p>
 
               <div className="flex gap-3.5 flex-wrap flex-col sm:flex-row mb-5">
@@ -549,6 +595,13 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       {isGambling ? "玩家聯絡管道 (LINE / 電話) *" : "聯絡方式 *"}
                     </label>
                     <input id="contact" name="contact" value={formData.contact} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)]" type="text" placeholder="LINE ID / 電話 / 手機號碼" required />
+                  </div>
+
+                  <div className="flex flex-col gap-2 mb-3.5 col-span-1 sm:col-span-2">
+                    <label htmlFor="inviteCode" className="text-sm font-extrabold text-[var(--color-primary-dark)]">
+                      {isGambling ? "🎟️ VIP 邀請碼 (必填) *" : "🎟️ 活動邀請碼 (必填) *"}
+                    </label>
+                    <input id="inviteCode" name="inviteCode" value={formData.inviteCode} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)] font-mono tracking-widest uppercase" type="text" placeholder="輸入 8 碼邀請碼" required />
                   </div>
 
                   <div className="flex flex-col gap-2 mb-3.5 col-span-1 sm:col-span-2">

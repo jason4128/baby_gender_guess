@@ -4,6 +4,8 @@ export interface SiteConfig {
   actualGender: string;
   winnerCount: number;
   winners?: Guess[];
+  boyImageUrl?: string;
+  girlImageUrl?: string;
 }
 
 export interface InviteCode {

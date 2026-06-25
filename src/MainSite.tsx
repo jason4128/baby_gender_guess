@@ -11,6 +11,7 @@ import babyBoyIcon from './assets/images/baby_boy_icon_1782268085326.jpg';
 // @ts-ignore
 import babyGirlIcon from './assets/images/baby_girl_icon_1782268101031.jpg';
 import { themes } from './themes';
+import { CelebrationBall } from './components/CelebrationBall';
 
 interface MainSiteProps {
   themeId: string;
@@ -32,7 +33,9 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
     closeTime: "2026-08-30T23:59:59",
     isVotingOpen: true,
     actualGender: "",
-    winnerCount: 3
+    winnerCount: 3,
+    boyImageUrl: babyBoyIcon,
+    girlImageUrl: babyGirlIcon
   });
   
   const [stats, setStats] = useState({ total: 0, boy: 0, girl: 0 });
@@ -41,7 +44,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   // Countdown specific state
   const [timeLeft, setTimeLeft] = useState({ days: '00', hours: '00', minutes: '00', seconds: '00' });
   const [isClosed, setIsClosed] = useState(false);
-
+ 
   // Form state
   const [formData, setFormData] = useState({
     gender: '',
@@ -54,13 +57,14 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{type: 'success'|'error', text: React.ReactNode} | null>(null);
-
+ 
   const [guesses, setGuesses] = useState<Guess[]>([]);
   const [revealState, setRevealState] = useState<'initial' | 'revealing' | 'revealed'>('initial');
   const [drawState, setDrawState] = useState<'hidden' | 'ready' | 'drawing' | 'done'>('hidden');
   const [rollingName, setRollingName] = useState<string>('');
   const [revealedGenderFlashing, setRevealedGenderFlashing] = useState<string>('男寶');
-
+  const [drawCountdown, setDrawCountdown] = useState<number | null>(null);
+ 
   const loadSiteConfig = async () => {
     try {
       const ref = doc(db, "settings", "siteConfig");
@@ -73,7 +77,9 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           isVotingOpen: data.isVotingOpen ?? prev.isVotingOpen,
           actualGender: data.actualGender || prev.actualGender,
           winnerCount: data.winnerCount || prev.winnerCount,
-          winners: data.winners || []
+          winners: data.winners || [],
+          boyImageUrl: data.boyImageUrl || prev.boyImageUrl,
+          girlImageUrl: data.girlImageUrl || prev.girlImageUrl
         }));
       }
     } catch (error) {
@@ -142,21 +148,43 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const handleStartReveal = () => {
     setRevealState('revealing');
     setDrawState('hidden');
-    let flashCount = 0;
+    setDrawCountdown(null);
     const interval = setInterval(() => {
       setRevealedGenderFlashing(prev => prev === '男寶' ? '女寶' : '男寶');
-      flashCount++;
-      if (flashCount >= 30) {
-        clearInterval(interval);
-        setRevealState('revealed');
-        setDrawState('ready');
-      }
-    }, 100);
+    }, 120);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      setRevealState('revealed');
+      setDrawState('ready');
+      
+      // Wait 2 seconds (2000ms) for guests to view the gender reveal result first
+      setTimeout(() => {
+        // Auto-scroll to lucky-draw-container
+        document.getElementById('lucky-draw-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Start 3-second countdown to automatically draw
+        setDrawCountdown(3);
+        let count = 3;
+        const countdownTimer = setInterval(() => {
+          count--;
+          if (count <= 0) {
+            clearInterval(countdownTimer);
+            setDrawCountdown(null);
+            handleStartDraw(true);
+          } else {
+            setDrawCountdown(count);
+          }
+        }, 1000);
+      }, 2000);
+    }, 5800);
   };
 
-  const handleStartDraw = () => {
+  const handleStartDraw = (isAuto = false) => {
     if (!siteConfig.winners || siteConfig.winners.length === 0) {
-      alert("目前主辦人尚未在後台完成幸運得主抽獎，請稍候重試或通知主辦人！");
+      if (!isAuto) {
+        alert("目前主辦人尚未在後台完成幸運得主抽獎，請稍候重試或通知主辦人！");
+      }
       return;
     }
     setDrawState('drawing');
@@ -329,6 +357,626 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
       </header>
 
       <main>
+        <CelebrationBall isOpen={drawState === 'done'} />
+        {(siteConfig.actualGender || isAdmin(currentUser?.email)) && (
+          <section id="reveal" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10 scroll-mt-6">
+            <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 md:p-10 text-center relative overflow-hidden" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              
+              {/* Header Title */}
+              <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold mb-5">
+                {isGambling ? "🎰 澳門現場即時派彩盤口 👑" : "🎉 期待已久的揭曉時刻 👶"}
+              </div>
+              <h2 className="text-[28px] sm:text-[36px] font-extrabold text-[var(--color-primary-dark)] mb-6">
+                {isGambling ? "威尼斯人・寶寶性別開獎大廳" : "寶寶性別正式揭曉與幸運抽獎"}
+              </h2>
+
+              {/* Phase 1: Gender Reveal Container */}
+              <div className="max-w-2xl mx-auto mb-10">
+                {revealState === 'initial' && (
+                  <div className="bg-white/5 dark:bg-slate-900/40 border border-dashed border-[rgba(140,111,232,.3)] rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px]">
+                    {/* Pulsing secret egg */}
+                    <div className="w-[120px] sm:w-[150px] aspect-square rounded-full bg-gradient-to-tr from-[#90caf9] via-[#e1bee7] to-[#f48fb1] flex items-center justify-center text-[50px] sm:text-[64px] animate-bounce shadow-xl relative border-4 border-white dark:border-slate-800">
+                      ❓
+                      <div className="absolute inset-0 rounded-full animate-ping bg-indigo-500/10" />
+                    </div>
+                    <h3 className="text-xl font-extrabold text-[var(--color-primary-dark)] mt-6 mb-2">
+                      {isGambling ? "🎲 莊家已完成性別封盤確認！" : "✨ 性別結果已經送達！"}
+                    </h3>
+                    <p className="text-[var(--color-muted)] text-sm font-medium mb-6 leading-relaxed">
+                      點擊下方按鈕開始倒數並進行戲劇性開獎揭曉！
+                    </p>
+                    <button 
+                      onClick={handleStartReveal}
+                      className="px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-[#8c6fe8] to-[#b49bff] hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer"
+                    >
+                      🔮 點擊開始揭曉寶寶性別 ⚡
+                    </button>
+                  </div>
+                )}
+
+                {revealState === 'revealing' && (
+                  <div className="bg-slate-950 border border-indigo-950 rounded-3xl p-6 md:p-10 flex flex-col items-center justify-center min-h-[500px] overflow-hidden relative shadow-[0_0_50px_rgba(140,111,232,0.3)] select-none">
+                    <style>{`
+                      @keyframes fgoSpinClockwise {
+                        0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); opacity: 0; }
+                        15% { opacity: 0.8; }
+                        100% { transform: translate(-50%, -50%) rotate(360deg) scale(1.1); opacity: 0.95; }
+                      }
+                      @keyframes fgoSpinCounterClockwise {
+                        0% { transform: translate(-50%, -50%) rotate(360deg) scale(0.65); opacity: 0; }
+                        20% { opacity: 0.7; }
+                        100% { transform: translate(-50%, -50%) rotate(0deg) scale(1.25); opacity: 0.85; }
+                      }
+                      @keyframes fgoPillarBurst {
+                        0%, 20% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
+                        25% { transform: translate(-50%, -50%) scaleX(1); opacity: 1; filter: brightness(2.5); }
+                        60% { transform: translate(-50%, -50%) scaleX(1.8); opacity: 0.95; filter: brightness(1.8); }
+                        80% { transform: translate(-50%, -50%) scaleX(0.2); opacity: 0.4; }
+                        100% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
+                      }
+                      @keyframes fgoCardFloatIn {
+                        0%, 30% { transform: scale(0) rotateY(0deg); opacity: 0; filter: brightness(3); }
+                        45% { transform: scale(1) rotateY(720deg); opacity: 1; filter: brightness(1.5); }
+                        70% { transform: scale(1.05) rotateY(1440deg); opacity: 1; filter: brightness(1); }
+                        90% { transform: scale(1.1) rotateY(2160deg); opacity: 1; filter: brightness(1.3); }
+                        100% { transform: scale(1) rotateY(2520deg); opacity: 1; filter: brightness(1); }
+                      }
+                      @keyframes fgoCardFlipY {
+                        0%, 65% { transform: rotateY(0deg); }
+                        85%, 100% { transform: rotateY(180deg); }
+                      }
+                      @keyframes fgoSparkleFloat {
+                        0% { transform: translateY(120px) scale(0); opacity: 0; }
+                        40% { opacity: 1; }
+                        100% { transform: translateY(-160px) scale(1.3); opacity: 0; }
+                      }
+                      @keyframes fgoLightningStrike {
+                        0%, 100% { opacity: 0; }
+                        12%, 14%, 38%, 40%, 75%, 77% { opacity: 0.95; filter: drop-shadow(0 0 15px rgba(255,255,255,0.9)); }
+                        13%, 39%, 76% { opacity: 0.2; }
+                      }
+                      .backface-hidden {
+                        backface-visibility: hidden;
+                        -webkit-backface-visibility: hidden;
+                      }
+                    `}</style>
+                    
+                    {/* Dark Cosmic Void Background */}
+                    <div className="absolute inset-0 bg-[#070514] opacity-100 z-0" />
+                    
+                    {/* Glowing nebulas based on flashing gender state to create tension */}
+                    <div className={`absolute inset-0 opacity-25 transition-all duration-1000 z-0 blur-3xl ${
+                      revealedGenderFlashing === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent'
+                    }`} />
+
+                    {/* Concentric spinning runic arrays (FGO style) */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] aspect-square pointer-events-none z-10">
+                      {/* Outer spinning dash array with gold/pink/blue border */}
+                      <div 
+                        className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/40 rounded-full w-full h-full"
+                        style={{ animation: 'fgoSpinClockwise 5.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                      >
+                        <div className="absolute inset-2 border-2 border-indigo-400/30 rounded-full flex items-center justify-center">
+                          <div className="text-yellow-400/35 text-[9px] font-mono tracking-[0.55em] uppercase w-full text-center rotate-45 select-none font-black">
+                            ✦ BABY REVEAL SUMMONING SYSTEM ✦
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Middle counter-rotating rune circle */}
+                      <div 
+                        className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/50 rounded-full w-[82%] h-[82%]"
+                        style={{ animation: 'fgoSpinCounterClockwise 5.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                      >
+                        <div className="absolute inset-4 border border-dashed border-pink-400/20 rounded-full" />
+                      </div>
+
+                      {/* Deep internal glow core */}
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl animate-pulse" />
+                    </div>
+
+                    {/* Giant Pillar of Light summoning beam */}
+                    <div 
+                      className={`absolute left-1/2 top-1/2 h-[600px] w-48 pointer-events-none z-10 ${
+                        siteConfig.actualGender === '男寶'
+                          ? 'bg-gradient-to-r from-transparent via-blue-400/80 to-transparent'
+                          : 'bg-gradient-to-r from-transparent via-pink-400/80 to-transparent'
+                      }`}
+                      style={{ animation: 'fgoPillarBurst 5.8s ease-in-out forwards' }}
+                    />
+
+                    {/* Lightning Sparks flashing overlay */}
+                    <div className="absolute inset-0 pointer-events-none z-10" style={{ animation: 'fgoLightningStrike 3.5s ease-in-out infinite' }}>
+                      <svg className="w-full h-full stroke-yellow-300 dark:stroke-cyan-300 opacity-60" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <path d="M 50 0 L 48 25 L 53 45 L 46 65 L 51 100" fill="none" strokeWidth="0.6" />
+                        <path d="M 25 5 L 28 35 L 24 55 L 27 100" fill="none" strokeWidth="0.4" className="hidden sm:block" />
+                        <path d="M 75 10 L 72 40 L 76 60 L 73 100" fill="none" strokeWidth="0.4" className="hidden sm:block" />
+                      </svg>
+                    </div>
+
+                    {/* Spinning FGO Class Card Back with slow 3D flip */}
+                    <div 
+                      className="relative z-20 w-[190px] sm:w-[230px] aspect-[1/1.62]"
+                      style={{ 
+                        animation: 'fgoCardFloatIn 5.8s cubic-bezier(0.19, 1, 0.22, 1) forwards',
+                        perspective: '1000px',
+                      }}
+                    >
+                      <div 
+                        className="w-full h-full relative"
+                        style={{
+                          transformStyle: 'preserve-3d',
+                          animation: 'fgoCardFlipY 5.8s cubic-bezier(0.25, 1, 0.5, 1) forwards'
+                        }}
+                      >
+                        {/* CARD BACK (shown first, face up until flip) */}
+                        <div className="absolute inset-0 backface-hidden rounded-2xl flex flex-col justify-between p-4 border-4 border-yellow-500 bg-[#0e0c1f] shadow-[0_0_50px_rgba(234,179,8,0.5)] overflow-hidden">
+                          {/* Detailed Gold Card Corners */}
+                          <div className="absolute top-1 left-1 w-6 h-6 border-t-2 border-l-2 border-yellow-400 rounded-tl-md" />
+                          <div className="absolute top-1 right-1 w-6 h-6 border-t-2 border-r-2 border-yellow-400 rounded-tr-md" />
+                          <div className="absolute bottom-1 left-1 w-6 h-6 border-b-2 border-l-2 border-yellow-400 rounded-bl-md" />
+                          <div className="absolute bottom-1 right-1 w-6 h-6 border-b-2 border-r-2 border-yellow-400 rounded-br-md" />
+                          
+                          {/* Runic Frame Borders */}
+                          <div className="absolute inset-2 border border-yellow-500/40 rounded-xl bg-[radial-gradient(ellipse_at_center,rgba(67,56,202,0.35)_0%,transparent_85%)] flex flex-col items-center justify-between py-6">
+                            
+                            {/* Title Badge: Baby Class */}
+                            <div className="text-[10px] font-black tracking-[0.3em] text-yellow-400 uppercase font-mono bg-indigo-950/90 px-3 py-1 rounded border border-yellow-500/50">
+                              BABY CLASS
+                            </div>
+
+                            {/* Centered Class Symbol (Baby Boy/Girl Mystics) */}
+                            <div className="relative w-20 h-20 flex items-center justify-center">
+                              <div className="absolute inset-0 rounded-full border-2 border-double border-yellow-400/60 animate-spin" style={{ animationDuration: '12s' }} />
+                              <div className="absolute inset-2 rounded-full border border-dashed border-indigo-400/40 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }} />
+                              
+                              {/* Pulsing baby emoji with gold glow */}
+                              <span className="text-4xl filter drop-shadow-[0_0_15px_rgba(234,179,8,0.9)] animate-pulse">👶</span>
+                            </div>
+
+                            {/* Footer Inscriptions */}
+                            <div className="text-center">
+                              <div className="text-yellow-400 text-xs font-serif tracking-[0.2em] font-extrabold uppercase">
+                                Grand Gender
+                              </div>
+                              <div className="text-[8px] text-indigo-300 font-mono tracking-widest mt-1 opacity-90 uppercase">
+                                No. 777 / SUMMON
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Glossy card gleam effect */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
+                        </div>
+
+                        {/* CARD FRONT (shown after 180deg flip) */}
+                        <div 
+                          className="absolute inset-0 backface-hidden rounded-2xl flex flex-col justify-between p-4 border-4 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.7)] overflow-hidden"
+                          style={{
+                            transform: 'rotateY(180deg)',
+                            background: siteConfig.actualGender === '男寶'
+                              ? 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #1d4ed8 70%, #020617 100%)'
+                              : 'linear-gradient(135deg, #180018 0%, #4c0519 30%, #9d174d 70%, #180018 100%)'
+                          }}
+                        >
+                          {/* Sparkle overlay based on boy/girl */}
+                          <div className={`absolute inset-0 opacity-40 mix-blend-screen pointer-events-none bg-cover bg-center ${
+                            siteConfig.actualGender === '男寶' 
+                              ? 'bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.3)_0%,transparent_70%)]' 
+                              : 'bg-[radial-gradient(circle_at_center,rgba(244,114,182,0.3)_0%,transparent_70%)]'
+                          }`} />
+
+                          {/* Detailed Gold Card Corners */}
+                          <div className="absolute top-1 left-1 w-6 h-6 border-t-2 border-l-2 border-yellow-400 rounded-tl-md z-10" />
+                          <div className="absolute top-1 right-1 w-6 h-6 border-t-2 border-r-2 border-yellow-400 rounded-tr-md z-10" />
+                          <div className="absolute bottom-1 left-1 w-6 h-6 border-b-2 border-l-2 border-yellow-400 rounded-bl-md z-10" />
+                          <div className="absolute bottom-1 right-1 w-6 h-6 border-b-2 border-r-2 border-yellow-400 rounded-br-md z-10" />
+
+                          {/* Runic Frame Borders */}
+                          <div className={`absolute inset-2 border rounded-xl flex flex-col items-center justify-between py-5 z-10 ${
+                            siteConfig.actualGender === '男寶' 
+                              ? 'border-cyan-400/50 bg-slate-950/40' 
+                              : 'border-pink-400/50 bg-rose-950/40'
+                          }`}>
+                            
+                            {/* Class Badge */}
+                            <div className={`text-[11px] font-black tracking-[0.25em] text-yellow-300 uppercase font-serif px-3 py-0.5 rounded border ${
+                              siteConfig.actualGender === '男寶' 
+                                ? 'bg-blue-950/90 border-blue-400/50' 
+                                : 'bg-pink-950/90 border-pink-400/50'
+                            }`}>
+                              {siteConfig.actualGender === '男寶' ? '⚔️ SABER BOY' : '🪄 CASTER GIRL'}
+                            </div>
+
+                            {/* 5-Star SSR Emblem */}
+                            <div className="flex items-center gap-0.5 text-xs text-yellow-400 font-extrabold filter drop-shadow-[0_1px_4px_rgba(234,179,8,0.7)]">
+                              ★ ★ ★ ★ ★ <span className="ml-1 text-[9px] bg-yellow-400 text-black px-1 rounded-sm py-0.2 select-none font-sans font-black">SSR</span>
+                            </div>
+
+                            {/* Main Character Avatar */}
+                            <div className="relative w-22 h-22 flex items-center justify-center rounded-full bg-slate-900/60 border border-yellow-400/40 shadow-lg">
+                              <div className={`absolute inset-0 rounded-full border border-dashed animate-spin ${
+                                siteConfig.actualGender === '男寶' ? 'border-cyan-400/40' : 'border-pink-400/40'
+                              }`} style={{ animationDuration: '8s' }} />
+                              
+                              <span className="text-5xl filter drop-shadow-[0_2px_15px_rgba(255,255,255,0.4)] z-10 select-none animate-[bounce_2s_infinite]">
+                                {siteConfig.actualGender === '男寶' ? '👦' : '👧'}
+                              </span>
+
+                              <div className="absolute -bottom-1.5 bg-yellow-400 text-[10px] text-slate-950 px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow">
+                                {siteConfig.actualGender === '男寶' ? 'MALE' : 'FEMALE'}
+                              </div>
+                            </div>
+
+                            {/* Level & Stats Panel */}
+                            <div className="text-center w-full px-2">
+                              <div className="text-[10px] text-yellow-300 font-bold tracking-wider font-mono">
+                                LV. 99 / 99
+                              </div>
+                              <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] font-mono font-bold text-gray-300 bg-black/50 py-1 px-2 rounded-md border border-white/5">
+                                <span className="text-rose-400">HP <span className="text-white">99999</span></span>
+                                <span className="text-cyan-400">ATK <span className="text-white">99999</span></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Golden shimmer shine */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Magic sparkles floating upwards */}
+                    <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                      {[...Array(15)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className="absolute text-yellow-400/70 font-mono text-sm select-none"
+                          style={{
+                            left: `${Math.random() * 80 + 10}%`,
+                            bottom: '10%',
+                            animation: 'fgoSparkleFloat 4s linear infinite',
+                            animationDelay: `${Math.random() * 3.5}s`,
+                            animationDuration: `${Math.random() * 2 + 2.5}s`
+                          }}
+                        >
+                          {['✦', '✧', '★', '☆', '⚛', '𖦹'][Math.floor(Math.random() * 6)]}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bottom Status panel */}
+                    <div className="relative z-20 mt-8 text-center max-w-md">
+                      <h3 className="text-xl sm:text-2xl font-black text-yellow-300 font-serif tracking-[0.15em] animate-pulse drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                        {isGambling ? "🎰 聖晶石卡池・寶寶性別召喚中..." : "🔮 聖杯儀式・寶寶性別召喚中..."}
+                      </h3>
+                      <p className="text-indigo-200 text-xs sm:text-sm font-medium mt-2 tracking-wide leading-relaxed bg-indigo-950/60 border border-indigo-900/40 px-5 py-2.5 rounded-full shadow-inner max-w-xs sm:max-w-none mx-auto">
+                        ✨ 正在與根源記錄核對性別因果律，請屏息以待！
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {revealState === 'revealed' && (
+                  <div className="bg-slate-950 border border-indigo-950 rounded-3xl p-6 md:p-10 flex flex-col items-center justify-center min-h-[500px] overflow-hidden relative shadow-[0_0_50px_rgba(140,111,232,0.3)] select-none">
+                    <style>{`
+                      @keyframes fgoCardHover {
+                        0%, 100% { transform: translateY(0px) rotateY(180deg); }
+                        50% { transform: translateY(-12px) rotateY(180deg); }
+                      }
+                      @keyframes fgoSparkleFloat {
+                        0% { transform: translateY(120px) scale(0); opacity: 0; }
+                        40% { opacity: 1; }
+                        100% { transform: translateY(-160px) scale(1.3); opacity: 0; }
+                      }
+                    `}</style>
+                    
+                    {/* Dark Cosmic Void Background */}
+                    <div className="absolute inset-0 bg-[#070514] opacity-100 z-0" />
+                    
+                    {/* Glowing nebulas based on actual gender */}
+                    <div className={`absolute inset-0 opacity-40 transition-all duration-1000 z-0 blur-3xl ${
+                      siteConfig.actualGender === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent'
+                    }`} />
+
+                    {/* Concentric spinning runic arrays (Gently rotating in revealed state) */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] aspect-square pointer-events-none z-10 opacity-75">
+                      <div 
+                        className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/20 rounded-full w-full h-full animate-[spin_60s_linear_infinite]"
+                        style={{ transform: 'translate(-50%, -50%)' }}
+                      >
+                        <div className="absolute inset-2 border-2 border-indigo-400/10 rounded-full flex items-center justify-center" />
+                      </div>
+                      
+                      <div 
+                        className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/20 rounded-full w-[82%] h-[82%] animate-[spin_40s_linear_infinite]"
+                        style={{ transform: 'translate(-50%, -50%)', animationDirection: 'reverse' }}
+                      />
+                    </div>
+
+                    {/* FGO Class Card - statically flipped over to front face */}
+                    <div 
+                      className="relative z-20 w-[190px] sm:w-[230px] aspect-[1/1.62]"
+                      style={{ 
+                        perspective: '1000px',
+                      }}
+                    >
+                      <div 
+                        className="w-full h-full relative"
+                        style={{
+                          transformStyle: 'preserve-3d',
+                          transform: 'rotateY(180deg)',
+                          animation: 'fgoCardHover 4s ease-in-out infinite'
+                        }}
+                      >
+                        {/* CARD FRONT (shown because of 180deg flip) */}
+                        <div 
+                          className="absolute inset-0 backface-hidden rounded-2xl flex flex-col justify-between p-4 border-4 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.7)] overflow-hidden"
+                          style={{
+                            transform: 'rotateY(180deg)',
+                            background: siteConfig.actualGender === '男寶'
+                              ? 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #1d4ed8 70%, #020617 100%)'
+                              : 'linear-gradient(135deg, #180018 0%, #4c0519 30%, #9d174d 70%, #180018 100%)'
+                          }}
+                        >
+                          {/* Sparkle overlay based on boy/girl */}
+                          <div className={`absolute inset-0 opacity-40 mix-blend-screen pointer-events-none bg-cover bg-center ${
+                            siteConfig.actualGender === '男寶' 
+                              ? 'bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.3)_0%,transparent_70%)]' 
+                              : 'bg-[radial-gradient(circle_at_center,rgba(244,114,182,0.3)_0%,transparent_70%)]'
+                          }`} />
+
+                          {/* Detailed Gold Card Corners */}
+                          <div className="absolute top-1 left-1 w-6 h-6 border-t-2 border-l-2 border-yellow-400 rounded-tl-md z-10" />
+                          <div className="absolute top-1 right-1 w-6 h-6 border-t-2 border-r-2 border-yellow-400 rounded-tr-md z-10" />
+                          <div className="absolute bottom-1 left-1 w-6 h-6 border-b-2 border-l-2 border-yellow-400 rounded-bl-md z-10" />
+                          <div className="absolute bottom-1 right-1 w-6 h-6 border-b-2 border-r-2 border-yellow-400 rounded-br-md z-10" />
+
+                          {/* Runic Frame Borders */}
+                          <div className={`absolute inset-2 border rounded-xl flex flex-col items-center justify-between py-5 z-10 ${
+                            siteConfig.actualGender === '男寶' 
+                              ? 'border-cyan-400/50 bg-slate-950/40' 
+                              : 'border-pink-400/50 bg-rose-950/40'
+                          }`}>
+                            
+                            {/* Class Badge */}
+                            <div className={`text-[11px] font-black tracking-[0.25em] text-yellow-300 uppercase font-serif px-3 py-0.5 rounded border ${
+                              siteConfig.actualGender === '男寶' 
+                                ? 'bg-blue-950/90 border-blue-400/50' 
+                                : 'bg-pink-950/90 border-pink-400/50'
+                            }`}>
+                              {siteConfig.actualGender === '男寶' ? '⚔️ SABER BOY' : '🪄 CASTER GIRL'}
+                            </div>
+
+                            {/* 5-Star SSR Emblem */}
+                            <div className="flex items-center gap-0.5 text-xs text-yellow-400 font-extrabold filter drop-shadow-[0_1px_4px_rgba(234,179,8,0.7)]">
+                              ★ ★ ★ ★ ★ <span className="ml-1 text-[9px] bg-yellow-400 text-black px-1 rounded-sm py-0.2 select-none font-sans font-black">SSR</span>
+                            </div>
+
+                            {/* Main Character Avatar */}
+                            <div className="relative w-22 h-22 flex items-center justify-center rounded-full bg-slate-900/60 border border-yellow-400/40 shadow-lg">
+                              <div className={`absolute inset-0 rounded-full border border-dashed animate-spin ${
+                                siteConfig.actualGender === '男寶' ? 'border-cyan-400/40' : 'border-pink-400/40'
+                              }`} style={{ animationDuration: '8s' }} />
+                              
+                              <span className="text-5xl filter drop-shadow-[0_2px_15px_rgba(255,255,255,0.4)] z-10 select-none animate-[bounce_2s_infinite]">
+                                {siteConfig.actualGender === '男寶' ? '👦' : '👧'}
+                              </span>
+
+                              <div className="absolute -bottom-1.5 bg-yellow-400 text-[10px] text-slate-950 px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow">
+                                {siteConfig.actualGender === '男寶' ? 'MALE' : 'FEMALE'}
+                              </div>
+                            </div>
+
+                            {/* Level & Stats Panel */}
+                            <div className="text-center w-full px-2">
+                              <div className="text-[10px] text-yellow-300 font-bold tracking-wider font-mono">
+                                LV. 99 / 99
+                              </div>
+                              <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] font-mono font-bold text-gray-300 bg-black/50 py-1 px-2 rounded-md border border-white/5">
+                                <span className="text-rose-400">HP <span className="text-white">99999</span></span>
+                                <span className="text-cyan-400">ATK <span className="text-white">99999</span></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Golden shimmer shine */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Magic sparkles floating upwards */}
+                    <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                      {[...Array(20)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className="absolute text-yellow-400/80 font-mono text-sm select-none"
+                          style={{
+                            left: `${Math.random() * 90 + 5}%`,
+                            bottom: '-10%',
+                            animation: 'fgoSparkleFloat 5s linear infinite',
+                            animationDelay: `${Math.random() * 4}s`,
+                            animationDuration: `${Math.random() * 3 + 3}s`
+                          }}
+                        >
+                          {['✦', '✧', '★', '☆', '⚛', '𖦹', '🌸', '✨', '💙', '💖'][Math.floor(Math.random() * 10)]}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bottom Status panel */}
+                    <div className="relative z-20 mt-8 text-center max-w-md animate-[fadeIn_0.8s_ease-out_forwards]">
+                      <div className="text-sm font-extrabold text-amber-400 mb-2 uppercase tracking-widest font-mono">
+                        🏆 SUMMON REVEAL SUCCESS 🏆
+                      </div>
+                      <h3 className={`text-3xl sm:text-4xl font-black tracking-wider mb-3 filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${
+                        siteConfig.actualGender === '男寶' ? 'text-cyan-300' : 'text-pink-300'
+                      }`}>
+                        恭喜！召喚出 SSR {siteConfig.actualGender || "女寶"}！
+                      </h3>
+                      <p className="text-gray-300 text-xs sm:text-sm font-semibold leading-relaxed bg-black/60 border border-indigo-950 px-6 py-3.5 rounded-2xl shadow-xl max-w-xs sm:max-w-none mx-auto text-center">
+                        {siteConfig.actualGender === '男寶' 
+                          ? (isGambling ? "🎰 買中藍方【男寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【男寶】的親朋好友們，你們太厲害、太神準了！🎉")
+                          : (isGambling ? "🎰 買中紅方【女寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【女寶】的親朋好友們，你們太厲害、太神準了！🎉")
+                        }
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Phase 2: Correct Guessers & Lucky Draw Carousel */}
+              {revealState === 'revealed' && (
+                <div className="animate-[fadeIn_0.6s_ease-out_forwards] border-t border-[rgba(140,111,232,.15)] pt-8 mt-4 text-left">
+                  
+                  {/* Correct Guessers List */}
+                  <div className="mb-8">
+                    <h4 className="text-base sm:text-lg font-extrabold text-[var(--color-primary-dark)] mb-4 flex items-center gap-2">
+                      <span>🎯</span> 
+                      <span>猜中正確性別的玩家名單 ({guesses.filter(g => g.gender === siteConfig.actualGender).length} 人)：</span>
+                    </h4>
+                    {guesses.filter(g => g.gender === siteConfig.actualGender).length === 0 ? (
+                      <p className="text-[var(--color-muted)] text-sm font-semibold italic">目前沒有人猜中這個性別喔 🧩</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto p-4 bg-white/10 dark:bg-slate-900/50 border border-[var(--color-glass-border)] rounded-2xl">
+                        {guesses.filter(g => g.gender === siteConfig.actualGender).map((g) => (
+                          <div key={g.id} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-800 border border-[var(--color-glass-border)] text-[var(--color-primary-dark)] shadow-sm flex items-center gap-1.5">
+                            <span>👶</span>
+                            <span>{g.name}</span>
+                            <span className="text-[10px] opacity-60 font-mono">({g.relation})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lucky Winner Drawer */}
+                  <div id="lucky-draw-container" className="border border-[var(--color-glass-border)] rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[var(--color-glass-bg)] to-white/5 shadow-inner scroll-mt-24">
+                    <div className="text-center max-w-xl mx-auto">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-extrabold bg-yellow-100 text-yellow-700 border border-yellow-200 mb-4 animate-pulse">
+                        🎁 LUCKY DRAW TIME 🎁
+                      </div>
+                      <h4 className="text-xl sm:text-2xl font-black text-[var(--color-primary-dark)] mb-2">幸運得主大抽獎</h4>
+                      <p className="text-[var(--color-muted)] text-xs sm:text-sm font-semibold leading-relaxed mb-6">
+                        得獎結果同步讀取自主辦人在後台隨機抽選、完全公平公正的幸運名單！
+                      </p>
+
+                      {/* Display Slot Machine Countdown or Ready Frame */}
+                      {drawCountdown !== null && (
+                        <div className="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-yellow-400/30 rounded-2xl p-6 mb-6 text-center overflow-hidden relative shadow-lg">
+                          <style>{`
+                            @keyframes popCountdown {
+                              0% { transform: scale(0.3); opacity: 0; filter: blur(3px); }
+                              50% { transform: scale(1.4); opacity: 0.9; }
+                              100% { transform: scale(1); opacity: 1; filter: blur(0); }
+                            }
+                            .animate-pop-countdown {
+                              animation: popCountdown 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                            }
+                          `}</style>
+                          <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-yellow-500 block mb-3 animate-pulse">
+                            🎈 寶寶性別已揭曉！得獎名單將在 {drawCountdown} 秒後自動開抽 🎈
+                          </span>
+                          <div className="flex items-center justify-center h-28 relative">
+                            {/* Inner ambient glowing circles */}
+                            <div className="absolute w-24 h-24 rounded-full bg-amber-500/10 animate-ping" />
+                            <div className="absolute w-16 h-16 rounded-full bg-amber-400/20" />
+                            
+                            <span 
+                              key={drawCountdown} 
+                              className="text-6xl sm:text-7xl font-black text-amber-500 font-mono tracking-widest relative z-10 animate-pop-countdown drop-shadow-[0_4px_12px_rgba(245,158,11,0.3)]"
+                            >
+                              {drawCountdown}
+                            </span>
+                          </div>
+                          
+                          {/* Progress bar ticking down */}
+                          <div className="w-full bg-amber-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-3 max-w-xs mx-auto">
+                            <div 
+                              className="bg-amber-500 h-full transition-all duration-1000 ease-linear rounded-full" 
+                              style={{ width: `${(drawCountdown / 3) * 100}%` }} 
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {drawState === 'ready' && drawCountdown === null && (
+                        <div className="bg-white/10 dark:bg-slate-900/60 border border-[var(--color-glass-border)] rounded-2xl p-6 mb-6">
+                          <div className="text-[36px] sm:text-[48px] filter saturate-50 animate-pulse mb-3">🎰</div>
+                          <p className="text-[var(--color-muted)] text-sm font-extrabold mb-4">準備好揭曉幸運得獎者了嗎？點擊下方按鈕啟動轉輪！</p>
+                          <button 
+                            onClick={() => handleStartDraw()}
+                            disabled={!siteConfig.winners || siteConfig.winners.length === 0}
+                            className={`px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer ${
+                              (!siteConfig.winners || siteConfig.winners.length === 0) ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''
+                            }`}
+                          >
+                            🎰 開始抽取幸運得主 🎁
+                          </button>
+                          {(!siteConfig.winners || siteConfig.winners.length === 0) && (
+                            <p className="text-xs text-red-500 font-bold mt-2.5">
+                              ⚠️ 主辦人尚未在後台完成隨機抽獎，暫時無法啟動開獎機。請靜待通知！
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {drawState === 'drawing' && (
+                        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-4 border-yellow-400 rounded-2xl p-8 mb-6 shadow-2xl relative overflow-hidden animate-[pulse_1s_infinite]">
+                          <div className="absolute inset-0 bg-[linear-gradient(rgba(234,179,8,0.1)_2px,transparent_2px)] bg-[size:100%_24px] pointer-events-none" />
+                          <div className="text-yellow-400 text-xs font-mono tracking-widest uppercase mb-2 animate-pulse">● SPINNER ACTIVE</div>
+                          <div className="text-3xl sm:text-5xl font-black text-white font-mono tracking-wider animate-bounce">
+                            {rollingName || "???"}
+                          </div>
+                          <p className="text-indigo-200/80 text-xs font-bold mt-4 animate-pulse">正在核對全場對中盤口數據，計算極致好運得主...</p>
+                        </div>
+                      )}
+
+                      {drawState === 'done' && (
+                        <div>
+                          <div className="bg-gradient-to-r from-amber-50/60 to-yellow-50/60 dark:from-yellow-950/10 dark:to-slate-900/50 border-2 border-yellow-300 dark:border-yellow-900/50 rounded-2xl p-6 sm:p-8 mb-6 shadow-xl text-center">
+                            <div className="text-5xl mb-4 animate-bounce">👑</div>
+                            <h5 className="text-2xl font-extrabold text-amber-700 dark:text-amber-400 mb-4">🏆 恭喜以下幸運中獎者 🏆</h5>
+                            
+                            <div className="grid gap-4 max-w-lg mx-auto">
+                              {(!siteConfig.winners || siteConfig.winners.length === 0) ? (
+                                <p className="text-[var(--color-muted)] text-sm font-semibold italic">暫無得獎者數據 📭</p>
+                              ) : (
+                                siteConfig.winners.map((item, idx) => (
+                                  <div key={item.id || idx} className="bg-white dark:bg-slate-800 border border-yellow-200 dark:border-yellow-900/40 rounded-xl p-4 text-left shadow-sm">
+                                    <div className="flex justify-between items-start gap-2 border-b border-gray-100 dark:border-slate-700 pb-2 mb-2">
+                                      <strong className="text-base text-[var(--color-primary-dark)]">
+                                        🎉 特等獎得主 {idx + 1}：{item.name}
+                                      </strong>
+                                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 font-mono">
+                                        {item.relation}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-[var(--color-muted)] leading-relaxed space-y-1 font-medium">
+                                      <div>📞 聯絡方式：{item.contact}</div>
+                                      <div>🎁 期望禮物：{item.giftWish || "—"}</div>
+                                      <div className="italic text-gray-500 mt-1">✍️ 祝福留言："{item.wish || "祝寶寶健康平安"}"</div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            {/* Replay button removed per user request */}
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          </section>
+        )}
         <section className="py-4 pb-6 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
           <div className="rounded-[var(--radius-xl)] p-6 md:p-10 border border-[var(--color-glass-border,rgba(255,255,255,0.8))] shadow-[var(--shadow-custom)] grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-6 items-center overflow-hidden relative" style={{ background: 'var(--color-card-grad)' }}>
             <div>
@@ -397,7 +1045,12 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                   {isGambling ? "💎 自動結算派彩" : "🧸 Guess & Win"}
                 </div>
                 <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden">
-                  <img src={babyImage} alt="Baby" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img 
+                    src={siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage} 
+                    alt="Baby" 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer" 
+                  />
                 </div>
               </div>
             </div>
@@ -784,237 +1437,6 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           </div>
         </section>
 
-        {(siteConfig.actualGender || isAdmin(currentUser?.email)) && (
-          <section id="reveal" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10 scroll-mt-6">
-            <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 md:p-10 text-center relative overflow-hidden" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              
-              {/* Header Title */}
-              <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold mb-5">
-                {isGambling ? "🎰 澳門現場即時派彩盤口 👑" : "🎉 期待已久的揭曉時刻 👶"}
-              </div>
-              <h2 className="text-[28px] sm:text-[36px] font-extrabold text-[var(--color-primary-dark)] mb-6">
-                {isGambling ? "威尼斯人・寶寶性別開獎大廳" : "寶寶性別正式揭曉與幸運抽獎"}
-              </h2>
-
-              {/* Phase 1: Gender Reveal Container */}
-              <div className="max-w-2xl mx-auto mb-10">
-                {revealState === 'initial' && (
-                  <div className="bg-white/5 dark:bg-slate-900/40 border border-dashed border-[rgba(140,111,232,.3)] rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px]">
-                    {/* Pulsing secret egg */}
-                    <div className="w-[120px] sm:w-[150px] aspect-square rounded-full bg-gradient-to-tr from-[#90caf9] via-[#e1bee7] to-[#f48fb1] flex items-center justify-center text-[50px] sm:text-[64px] animate-bounce shadow-xl relative border-4 border-white dark:border-slate-800">
-                      ❓
-                      <div className="absolute inset-0 rounded-full animate-ping bg-indigo-500/10" />
-                    </div>
-                    <h3 className="text-xl font-extrabold text-[var(--color-primary-dark)] mt-6 mb-2">
-                      {isGambling ? "🎲 莊家已完成性別封盤確認！" : "✨ 性別結果已經送達！"}
-                    </h3>
-                    <p className="text-[var(--color-muted)] text-sm font-medium mb-6 leading-relaxed">
-                      點擊下方按鈕開始倒數並進行戲劇性開獎揭曉！
-                    </p>
-                    <button 
-                      onClick={handleStartReveal}
-                      className="px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-[#8c6fe8] to-[#b49bff] hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer"
-                    >
-                      🔮 點擊開始揭曉寶寶性別 ⚡
-                    </button>
-                  </div>
-                )}
-
-                {revealState === 'revealing' && (
-                  <div className="bg-white/5 dark:bg-slate-900/40 border border-[rgba(140,111,232,.2)] rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px] overflow-hidden relative">
-                    {/* Flashing Lightbox Background */}
-                    <div className={`absolute inset-0 opacity-10 transition-colors duration-75 ${revealedGenderFlashing === '男寶' ? 'bg-blue-500' : 'bg-pink-500'}`} />
-                    
-                    {/* Spinning capsule */}
-                    <div className={`w-[120px] sm:w-[150px] aspect-square rounded-full flex items-center justify-center text-[50px] sm:text-[64px] shadow-2xl relative border-4 border-white dark:border-slate-800 animate-spin transition-all ${
-                      revealedGenderFlashing === '男寶' ? 'bg-gradient-to-br from-blue-300 to-blue-500 text-blue-100' : 'bg-gradient-to-br from-pink-300 to-pink-500 text-pink-100'
-                    }`}>
-                      {revealedGenderFlashing === '男寶' ? "💙" : "💖"}
-                    </div>
-
-                    <h3 className="text-lg sm:text-xl font-extrabold text-[var(--color-primary-dark)] mt-6 mb-2 animate-pulse">
-                      {isGambling ? "🎰 萬眾矚目！自動結算核對中..." : "🤫 屏息以待！答案即將揭曉..."}
-                    </h3>
-                    <div className="w-48 bg-gray-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden mt-3">
-                      <div className="bg-gradient-to-r from-blue-400 to-pink-400 h-full animate-[loading-bar_3s_linear_infinite]" style={{ width: '100%' }} />
-                    </div>
-                  </div>
-                )}
-
-                {revealState === 'revealed' && (
-                  <div className="animate-[scaleUp_0.5s_ease-out_forwards]">
-                    {/* Custom Confetti Layer */}
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                      {[...Array(12)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`absolute rounded-full animate-[floatY_5s_ease-in-out_infinite] opacity-60 ${
-                            siteConfig.actualGender === '男寶' ? 'bg-blue-300/30 text-blue-500' : 'bg-pink-300/30 text-pink-500'
-                          }`}
-                          style={{
-                            width: `${Math.random() * 20 + 10}px`,
-                            height: `${Math.random() * 20 + 10}px`,
-                            left: `${Math.random() * 90 + 5}%`,
-                            top: `${Math.random() * 90 + 5}%`,
-                            animationDelay: `${Math.random() * 3}s`,
-                            animationDuration: `${Math.random() * 4 + 4}s`
-                          }}
-                        />
-                      ))}
-                    </div>
-
-                    <div className={`rounded-3xl p-8 border-2 shadow-2xl flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden ${
-                      siteConfig.actualGender === '男寶' 
-                        ? 'bg-blue-50/70 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50' 
-                        : 'bg-pink-50/70 dark:bg-pink-950/20 border-pink-200 dark:border-pink-900/50'
-                    }`}>
-                      <div className="text-[64px] sm:text-[80px] animate-bounce mb-4">
-                        {siteConfig.actualGender === '男寶' ? "👶💙" : "👶💖"}
-                      </div>
-                      <div className="text-sm font-extrabold text-[var(--color-muted)] mb-1 uppercase tracking-widest">正式開獎結果</div>
-                      <h3 className={`text-3xl sm:text-5xl font-black mb-4 tracking-wider ${
-                        siteConfig.actualGender === '男寶' ? 'text-blue-600 dark:text-blue-400' : 'text-pink-600 dark:text-pink-400'
-                      }`}>
-                        恭喜！是個 {siteConfig.actualGender || "揭曉中"}！
-                      </h3>
-                      <p className="text-[var(--color-text)] max-w-md text-sm sm:text-base font-semibold leading-relaxed mb-6">
-                        {siteConfig.actualGender === '男寶' 
-                          ? (isGambling ? "🎰 買中藍方【男寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【男寶】的親朋好友們，你們太厲害、太神準了！🎉")
-                          : (isGambling ? "🎰 買中紅方【女寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【女寶】的親朋好友們，你們太厲害、太神準了！🎉")
-                        }
-                      </p>
-
-                      <div className="flex gap-3 flex-wrap justify-center">
-                        <button 
-                          onClick={() => setRevealState('initial')}
-                          className="px-4.5 py-2.5 rounded-full text-xs font-bold border border-[rgba(140,111,232,.25)] text-[var(--color-muted)] hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
-                        >
-                          🎬 重新播放開獎特效
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Phase 2: Correct Guessers & Lucky Draw Carousel */}
-              {revealState === 'revealed' && (
-                <div className="animate-[fadeIn_0.6s_ease-out_forwards] border-t border-[rgba(140,111,232,.15)] pt-8 mt-4 text-left">
-                  
-                  {/* Correct Guessers List */}
-                  <div className="mb-8">
-                    <h4 className="text-base sm:text-lg font-extrabold text-[var(--color-primary-dark)] mb-4 flex items-center gap-2">
-                      <span>🎯</span> 
-                      <span>猜中正確性別的玩家名單 ({guesses.filter(g => g.gender === siteConfig.actualGender).length} 人)：</span>
-                    </h4>
-                    {guesses.filter(g => g.gender === siteConfig.actualGender).length === 0 ? (
-                      <p className="text-[var(--color-muted)] text-sm font-semibold italic">目前沒有人猜中這個性別喔 🧩</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto p-4 bg-white/10 dark:bg-slate-900/50 border border-[var(--color-glass-border)] rounded-2xl">
-                        {guesses.filter(g => g.gender === siteConfig.actualGender).map((g) => (
-                          <div key={g.id} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-800 border border-[var(--color-glass-border)] text-[var(--color-primary-dark)] shadow-sm flex items-center gap-1.5">
-                            <span>👶</span>
-                            <span>{g.name}</span>
-                            <span className="text-[10px] opacity-60 font-mono">({g.relation})</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Lucky Winner Drawer */}
-                  <div className="border border-[var(--color-glass-border)] rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[var(--color-glass-bg)] to-white/5 shadow-inner">
-                    <div className="text-center max-w-xl mx-auto">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-extrabold bg-yellow-100 text-yellow-700 border border-yellow-200 mb-4 animate-pulse">
-                        🎁 LUCKY DRAW TIME 🎁
-                      </div>
-                      <h4 className="text-xl sm:text-2xl font-black text-[var(--color-primary-dark)] mb-2">幸運得主大抽獎</h4>
-                      <p className="text-[var(--color-muted)] text-xs sm:text-sm font-semibold leading-relaxed mb-6">
-                        得獎結果同步讀取自主辦人在後台隨機抽選、完全公平公正的幸運名單！
-                      </p>
-
-                      {/* Display Slot Machine Frame */}
-                      {drawState === 'ready' && (
-                        <div className="bg-white/10 dark:bg-slate-900/60 border border-[var(--color-glass-border)] rounded-2xl p-6 mb-6">
-                          <div className="text-[36px] sm:text-[48px] filter saturate-50 animate-pulse mb-3">🎰</div>
-                          <p className="text-[var(--color-muted)] text-sm font-extrabold mb-4">準備好揭曉幸運得獎者了嗎？點擊下方按鈕啟動轉輪！</p>
-                          <button 
-                            onClick={handleStartDraw}
-                            disabled={!siteConfig.winners || siteConfig.winners.length === 0}
-                            className={`px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer ${
-                              (!siteConfig.winners || siteConfig.winners.length === 0) ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''
-                            }`}
-                          >
-                            🎰 開始抽取幸運得主 🎁
-                          </button>
-                          {(!siteConfig.winners || siteConfig.winners.length === 0) && (
-                            <p className="text-xs text-red-500 font-bold mt-2.5">
-                              ⚠️ 主辦人尚未在後台完成隨機抽獎，暫時無法啟動開獎機。請靜待通知！
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {drawState === 'drawing' && (
-                        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-4 border-yellow-400 rounded-2xl p-8 mb-6 shadow-2xl relative overflow-hidden animate-[pulse_1s_infinite]">
-                          <div className="absolute inset-0 bg-[linear-gradient(rgba(234,179,8,0.1)_2px,transparent_2px)] bg-[size:100%_24px] pointer-events-none" />
-                          <div className="text-yellow-400 text-xs font-mono tracking-widest uppercase mb-2 animate-pulse">● SPINNER ACTIVE</div>
-                          <div className="text-3xl sm:text-5xl font-black text-white font-mono tracking-wider animate-bounce">
-                            {rollingName || "???"}
-                          </div>
-                          <p className="text-indigo-200/80 text-xs font-bold mt-4 animate-pulse">正在核對全場對中盤口數據，計算極致好運得主...</p>
-                        </div>
-                      )}
-
-                      {drawState === 'done' && (
-                        <div>
-                          <div className="bg-gradient-to-r from-amber-50/60 to-yellow-50/60 dark:from-yellow-950/10 dark:to-slate-900/50 border-2 border-yellow-300 dark:border-yellow-900/50 rounded-2xl p-6 sm:p-8 mb-6 shadow-xl text-center">
-                            <div className="text-5xl mb-4 animate-bounce">👑</div>
-                            <h5 className="text-2xl font-extrabold text-amber-700 dark:text-amber-400 mb-4">🏆 恭喜以下幸運中獎者 🏆</h5>
-                            
-                            <div className="grid gap-4 max-w-lg mx-auto">
-                              {(!siteConfig.winners || siteConfig.winners.length === 0) ? (
-                                <p className="text-[var(--color-muted)] text-sm font-semibold italic">暫無得獎者數據 📭</p>
-                              ) : (
-                                siteConfig.winners.map((item, idx) => (
-                                  <div key={item.id || idx} className="bg-white dark:bg-slate-800 border border-yellow-200 dark:border-yellow-900/40 rounded-xl p-4 text-left shadow-sm">
-                                    <div className="flex justify-between items-start gap-2 border-b border-gray-100 dark:border-slate-700 pb-2 mb-2">
-                                      <strong className="text-base text-[var(--color-primary-dark)]">
-                                        🎉 特等獎得主 {idx + 1}：{item.name}
-                                      </strong>
-                                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 font-mono">
-                                        {item.relation}
-                                      </span>
-                                    </div>
-                                    <div className="text-xs text-[var(--color-muted)] leading-relaxed space-y-1 font-medium">
-                                      <div>📞 聯絡方式：{item.contact}</div>
-                                      <div>🎁 期望禮物：{item.giftWish || "—"}</div>
-                                      <div className="italic text-gray-500 mt-1">✍️ 祝福留言："{item.wish || "祝寶寶健康平安"}"</div>
-                                    </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-
-                            <button 
-                              onClick={() => setDrawState('ready')}
-                              className="mt-6 px-5 py-2.5 rounded-full text-xs font-extrabold border border-yellow-300 dark:border-yellow-900 text-amber-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20 transition-all cursor-pointer"
-                            >
-                              🎬 重新播放抽獎轉輪
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-          </section>
-        )}
       </main>
 
       <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">

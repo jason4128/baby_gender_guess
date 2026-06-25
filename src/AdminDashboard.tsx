@@ -4,6 +4,10 @@ import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, serverTimestamp, w
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
 import { SiteConfig, Guess, InviteCode, isAdmin, ADMIN_EMAILS } from './types';
 import { themes } from './themes';
+// @ts-ignore
+import boyDefaultImage from './assets/images/baby_boy_icon_1782268085326.jpg';
+// @ts-ignore
+import girlDefaultImage from './assets/images/baby_girl_icon_1782268101031.jpg';
 
 interface AdminDashboardProps {
   themeId: string;
@@ -64,7 +68,9 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
     closeTime: "2026-08-30T23:59:59",
     isVotingOpen: true,
     actualGender: "",
-    winnerCount: 3
+    winnerCount: 3,
+    boyImageUrl: boyDefaultImage,
+    girlImageUrl: girlDefaultImage
   });
   const [guesses, setGuesses] = useState<Guess[]>([]);
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
@@ -95,7 +101,9 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
           closeTime: data.closeTime || prev.closeTime,
           isVotingOpen: data.isVotingOpen ?? prev.isVotingOpen,
           actualGender: data.actualGender || prev.actualGender,
-          winnerCount: data.winnerCount || prev.winnerCount
+          winnerCount: data.winnerCount || prev.winnerCount,
+          boyImageUrl: data.boyImageUrl || prev.boyImageUrl,
+          girlImageUrl: data.girlImageUrl || prev.girlImageUrl
         }));
         if (data.winners) {
           setWinners(data.winners);
@@ -316,6 +324,20 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
         setDrawAnimating(false);
       }
     }, intervalTime);
+  };
+
+  const clearWinners = async () => {
+    try {
+      setWinners([]);
+      await setDoc(doc(db, "settings", "siteConfig"), {
+        ...siteConfig,
+        winners: []
+      }, { merge: true });
+      showToast('success', "抽獎結果已成功清除！");
+    } catch (err) {
+      console.error("Clear winners failed:", err);
+      showToast('error', "清除抽獎結果失敗！");
+    }
   };
 
   const requestDeleteGuess = (id: string) => {
@@ -597,6 +619,28 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
             <label htmlFor="winnerCount" className="text-sm font-extrabold text-[var(--color-primary-dark)]">抽出幾位得獎者</label>
             <input id="winnerCount" value={siteConfig.winnerCount} onChange={handleInputChange} className="w-full border border-[rgba(140,111,232,.15)] bg-white/10 dark:bg-slate-900/60 rounded-2xl px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none" type="number" min="1" />
           </div>
+
+          <div className="flex flex-col gap-2 mb-3">
+            <label htmlFor="boyImageUrl" className="text-sm font-extrabold text-[var(--color-primary-dark)]">💙 男寶照片網址 / 路徑 (資料庫儲存)</label>
+            <input id="boyImageUrl" value={siteConfig.boyImageUrl || ""} onChange={handleInputChange} className="w-full border border-[rgba(140,111,232,.15)] bg-white/10 dark:bg-slate-900/60 rounded-2xl px-4 py-3 text-[13px] text-[var(--color-text)] outline-none font-mono" placeholder="男寶照片路徑或網址" />
+            {siteConfig.boyImageUrl && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[11px] text-[var(--color-muted)] font-semibold">預覽：</span>
+                <img src={siteConfig.boyImageUrl} alt="Boy Preview" className="w-10 h-10 object-cover rounded-lg border border-[var(--color-glass-border)] bg-slate-100" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 mb-3">
+            <label htmlFor="girlImageUrl" className="text-sm font-extrabold text-[var(--color-primary-dark)]">💖 女寶照片網址 / 路徑 (資料庫儲存)</label>
+            <input id="girlImageUrl" value={siteConfig.girlImageUrl || ""} onChange={handleInputChange} className="w-full border border-[rgba(140,111,232,.15)] bg-white/10 dark:bg-slate-900/60 rounded-2xl px-4 py-3 text-[13px] text-[var(--color-text)] outline-none font-mono" placeholder="女寶照片路徑或網址" />
+            {siteConfig.girlImageUrl && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[11px] text-[var(--color-muted)] font-semibold">預覽：</span>
+                <img src={siteConfig.girlImageUrl} alt="Girl Preview" className="w-10 h-10 object-cover rounded-lg border border-[var(--color-glass-border)] bg-slate-100" />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-[rgba(140,111,232,.08)] text-[var(--color-muted)] rounded-2xl p-4 leading-relaxed text-sm mt-3 border border-[rgba(140,111,232,.15)]">
@@ -691,9 +735,24 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
           <h2 className="text-[var(--color-primary-dark)] text-xl font-bold">
             {isGambling ? "🎁 極速自動派彩抽獎" : "抽獎 / 猜對名單"}
           </h2>
-          <button onClick={drawWinners} disabled={drawAnimating} className="bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] text-white px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-[0_12px_28px_rgba(140,111,232,.28)] disabled:opacity-50 disabled:cursor-not-allowed">
-            {isGambling ? "🎰 點擊一鍵自動派彩抽獎" : "抽出得獎者"}
-          </button>
+          <div className="flex gap-2.5 flex-wrap">
+            {winners.length > 0 && (
+              <button 
+                onClick={clearWinners} 
+                disabled={drawAnimating} 
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-[0_12px_28px_rgba(239,68,68,.28)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                🗑️ 清除抽獎結果
+              </button>
+            )}
+            <button 
+              onClick={drawWinners} 
+              disabled={drawAnimating} 
+              className="bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] text-white px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-[0_12px_28px_rgba(140,111,232,.28)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {isGambling ? "🎰 點擊一鍵自動派彩抽獎" : "抽出得獎者"}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

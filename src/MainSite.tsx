@@ -61,6 +61,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const [guesses, setGuesses] = useState<Guess[]>([]);
   const [revealState, setRevealState] = useState<'initial' | 'revealing' | 'revealed'>('initial');
   const [drawState, setDrawState] = useState<'hidden' | 'ready' | 'drawing' | 'done'>('hidden');
+  const showOnlyReveal = revealState === 'revealed' || revealState === 'revealing';
   const [rollingName, setRollingName] = useState<string>('');
   const [revealedGenderFlashing, setRevealedGenderFlashing] = useState<string>('男寶');
   const [drawCountdown, setDrawCountdown] = useState<number | null>(null);
@@ -331,7 +332,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
               ...(siteConfig.actualGender || isAdmin(currentUser?.email)
                 ? [{ id: 'reveal', label: isGambling ? '👑 派彩開獎' : '🎉 揭曉抽獎' }]
                 : [])
-            ].map((item) => (
+            ].filter(item => !showOnlyReveal).map((item) => (
               <button 
                 key={item.id} 
                 onClick={(e) => {
@@ -977,8 +978,10 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             </div>
           </section>
         )}
-        <section className="py-4 pb-6 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
-          <div className="rounded-[var(--radius-xl)] p-6 md:p-10 border border-[var(--color-glass-border,rgba(255,255,255,0.8))] shadow-[var(--shadow-custom)] grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-6 items-center overflow-hidden relative" style={{ background: 'var(--color-card-grad)' }}>
+        {!showOnlyReveal && (
+          <>
+            <section className="py-4 pb-6 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+              <div className="rounded-[var(--radius-xl)] p-6 md:p-10 border border-[var(--color-glass-border,rgba(255,255,255,0.8))] shadow-[var(--shadow-custom)] grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-6 items-center overflow-hidden relative" style={{ background: 'var(--color-card-grad)' }}>
             <div>
               <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2.5 rounded-full text-sm font-extrabold mb-[18px]">
                 {isGambling ? "🔥 全台最大盤口熱烈開盤中・買定離手！" : "✨ 一起來猜猜看，寶寶到底是男生還是女生？"}
@@ -1436,28 +1439,32 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             </div>
           </div>
         </section>
+          </>
+        )}
 
       </main>
 
-      <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
-        <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 text-center" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-          <h3 className="text-2xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
-            {isGambling ? "👑 澳門威尼斯人與您共度溫馨時刻 🍼" : "謝謝你參與我們的小活動 🍼"}
-          </h3>
-          <p className="text-[var(--color-muted)] leading-[1.85] mb-3.5 font-medium">
-            {isGambling 
-              ? "每一筆無息免費下注、每一聲至誠至真的祝福，都是我們最珍貴的寶藏。讓我們一同守候這最美的驚喜 💜"
-              : "每一份猜測、每一句祝福，對我們來說都是很珍貴的心意。一起期待寶寶正式揭曉的那一天吧 💜"
-            }
-          </p>
-          <div className="text-[var(--color-muted)] text-[13px] font-mono">
-            {isGambling 
-              ? "Baby Gender Guess Casino Platform ・ Powered by Venice Royal & AI Studio & Firebase Admin" 
-              : "Baby Gender Guess ・ Powered by AI Studio & Firebase"
-            }
+      {!showOnlyReveal && (
+        <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
+          <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 text-center" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+            <h3 className="text-2xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
+              {isGambling ? "👑 澳門威尼斯人與您共度溫馨時刻 🍼" : "謝謝你參與我們的小活動 🍼"}
+            </h3>
+            <p className="text-[var(--color-muted)] leading-[1.85] mb-3.5 font-medium">
+              {isGambling 
+                ? "每一筆無息免費下注、每一聲至誠至真的祝福，都是我們最珍貴的寶藏。讓我們一同守候這最美的驚喜 💜"
+                : "每一份猜測、每一句祝福，對我們來說都是很珍貴的心意。一起期待寶寶正式揭曉的那一天吧 💜"
+              }
+            </p>
+            <div className="text-[var(--color-muted)] text-[13px] font-mono">
+              {isGambling 
+                ? "Baby Gender Guess Casino Platform ・ Powered by Venice Royal & AI Studio & Firebase Admin" 
+                : "Baby Gender Guess ・ Powered by AI Studio & Firebase"
+              }
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </>
   );
 }

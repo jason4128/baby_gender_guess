@@ -5,9 +5,9 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, Google
 import { SiteConfig, Guess, InviteCode, isAdmin, ADMIN_EMAILS } from './types';
 import { themes } from './themes';
 // @ts-ignore
-import boyDefaultImage from './assets/images/baby_boy_icon_1782268085326.jpg';
+import boyDefaultImage from './components/assets/images/IMG_1587.jpeg';
 // @ts-ignore
-import girlDefaultImage from './assets/images/baby_girl_icon_1782268101031.jpg';
+import girlDefaultImage from './components/assets/images/IMG_1588.jpeg';
 
 interface AdminDashboardProps {
   themeId: string;

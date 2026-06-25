@@ -5,11 +5,11 @@ import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { SiteConfig, Guess, isAdmin } from './types';
 // @ts-ignore
-import babyImage from './assets/images/baby_whale_avatar_1782203089696.jpg';
+import babyImage from './components/assets/images/IMG_1589.jpeg';
 // @ts-ignore
-import babyBoyIcon from './assets/images/baby_boy_icon_1782268085326.jpg';
+import babyBoyIcon from './components/assets/images/IMG_1587.jpeg';
 // @ts-ignore
-import babyGirlIcon from './assets/images/baby_girl_icon_1782268101031.jpg';
+import babyGirlIcon from './components/assets/images/IMG_1588.jpeg';
 import { themes } from './themes';
 import { CelebrationBall } from './components/CelebrationBall';
 
@@ -152,14 +152,14 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
     setDrawCountdown(null);
     const interval = setInterval(() => {
       setRevealedGenderFlashing(prev => prev === '男寶' ? '女寶' : '男寶');
-    }, 120);
+    }, 150);
 
     setTimeout(() => {
       clearInterval(interval);
       setRevealState('revealed');
       setDrawState('ready');
       
-      // Wait 2 seconds (2000ms) for guests to view the gender reveal result first
+      // Wait 4 seconds (4000ms) for guests to view the gender reveal result first
       setTimeout(() => {
         // Auto-scroll to lucky-draw-container
         document.getElementById('lucky-draw-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -177,8 +177,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             setDrawCountdown(count);
           }
         }, 1000);
-      }, 2000);
-    }, 5800);
+      }, 4000);
+    }, 11000);
   };
 
   const handleStartDraw = (isAuto = false) => {
@@ -411,20 +411,57 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       @keyframes fgoPillarBurst {
                         0%, 20% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
                         25% { transform: translate(-50%, -50%) scaleX(1); opacity: 1; filter: brightness(2.5); }
-                        60% { transform: translate(-50%, -50%) scaleX(1.8); opacity: 0.95; filter: brightness(1.8); }
-                        80% { transform: translate(-50%, -50%) scaleX(0.2); opacity: 0.4; }
+                        65% { transform: translate(-50%, -50%) scaleX(1.8); opacity: 0.95; filter: brightness(1.8); }
+                        85% { transform: translate(-50%, -50%) scaleX(0.2); opacity: 0.4; }
                         100% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
                       }
                       @keyframes fgoCardFloatIn {
-                        0%, 30% { transform: scale(0) rotateY(0deg); opacity: 0; filter: brightness(3); }
-                        45% { transform: scale(1) rotateY(720deg); opacity: 1; filter: brightness(1.5); }
-                        70% { transform: scale(1.05) rotateY(1440deg); opacity: 1; filter: brightness(1); }
-                        90% { transform: scale(1.1) rotateY(2160deg); opacity: 1; filter: brightness(1.3); }
-                        100% { transform: scale(1) rotateY(2520deg); opacity: 1; filter: brightness(1); }
+                        0% { transform: scale(0) translateY(50px); opacity: 0; }
+                        10% { transform: scale(1) translateY(0); opacity: 1; }
+                        100% { transform: scale(1) translateY(0); opacity: 1; }
                       }
-                      @keyframes fgoCardFlipY {
-                        0%, 65% { transform: rotateY(0deg); }
-                        85%, 100% { transform: rotateY(180deg); }
+                      @keyframes fgoCardSpinRoulette {
+                        0% { transform: rotateY(0deg); filter: brightness(3); }
+                        10% { transform: rotateY(180deg); filter: brightness(1); }
+                        20% { transform: rotateY(360deg); }
+                        28% { transform: rotateY(540deg); }
+                        36% { transform: rotateY(720deg); }
+                        42% { transform: rotateY(900deg); }
+                        48% { transform: rotateY(1080deg); }
+                        53% { transform: rotateY(1260deg); }
+                        58% { transform: rotateY(1440deg); }
+                        62% { transform: rotateY(1620deg); }
+                        66% { transform: rotateY(1800deg); }
+                        69% { transform: rotateY(1980deg); }
+                        72% { transform: rotateY(2160deg); }
+                        74% { transform: rotateY(2340deg); }
+                        76% { transform: rotateY(2520deg); }
+                        78% { transform: rotateY(2700deg); }
+                        80% { transform: rotateY(2880deg); filter: brightness(1); }
+                        81.5% { transform: scale(1.05) rotateY(3150deg); filter: brightness(5) drop-shadow(0 0 50px #fff); }
+                        83% { transform: scale(1.1) rotateY(3420deg); filter: brightness(15) drop-shadow(0 0 100px #fff); }
+                        100% { transform: scale(1) rotateY(3420deg); filter: brightness(1) drop-shadow(0 0 20px gold); }
+                      }
+                      @keyframes whiteFlash {
+                        0%, 80% { opacity: 0; }
+                        82%, 85% { opacity: 1; }
+                        100% { opacity: 0; }
+                      }
+                      @keyframes boyFlash {
+                        0%, 19.9% { opacity: 1; }
+                        20%, 35.9% { opacity: 0; }
+                        36%, 47.9% { opacity: 1; }
+                        48%, 57.9% { opacity: 0; }
+                        58%, 65.9% { opacity: 1; }
+                        66%, 71.9% { opacity: 0; }
+                        72%, 75.9% { opacity: 1; }
+                        76%, 78.9% { opacity: 0; }
+                        79%, 80.9% { opacity: 1; }
+                        81%, 100% { opacity: 0; }
+                      }
+                      @keyframes finalFlash {
+                        0%, 82.9% { opacity: 0; }
+                        83%, 100% { opacity: 1; }
                       }
                       @keyframes fgoSparkleFloat {
                         0% { transform: translateY(120px) scale(0); opacity: 0; }
@@ -455,10 +492,10 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       {/* Outer spinning dash array with gold/pink/blue border */}
                       <div 
                         className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/40 rounded-full w-full h-full"
-                        style={{ animation: 'fgoSpinClockwise 5.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                        style={{ animation: 'fgoSpinClockwise 9.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
                       >
                         <div className="absolute inset-2 border-2 border-indigo-400/30 rounded-full flex items-center justify-center">
-                          <div className="text-yellow-400/35 text-[9px] font-mono tracking-[0.55em] uppercase w-full text-center rotate-45 select-none font-black">
+                           <div className="text-yellow-400/35 text-[9px] font-mono tracking-[0.55em] uppercase w-full text-center rotate-45 select-none font-black">
                             ✦ BABY REVEAL SUMMONING SYSTEM ✦
                           </div>
                         </div>
@@ -467,7 +504,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       {/* Middle counter-rotating rune circle */}
                       <div 
                         className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/50 rounded-full w-[82%] h-[82%]"
-                        style={{ animation: 'fgoSpinCounterClockwise 5.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                        style={{ animation: 'fgoSpinCounterClockwise 8.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
                       >
                         <div className="absolute inset-4 border border-dashed border-pink-400/20 rounded-full" />
                       </div>
@@ -483,7 +520,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                           ? 'bg-gradient-to-r from-transparent via-blue-400/80 to-transparent'
                           : 'bg-gradient-to-r from-transparent via-pink-400/80 to-transparent'
                       }`}
-                      style={{ animation: 'fgoPillarBurst 5.8s ease-in-out forwards' }}
+                      style={{ animation: 'fgoPillarBurst 9.0s ease-in-out forwards' }}
                     />
 
                     {/* Lightning Sparks flashing overlay */}
@@ -497,9 +534,9 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
                     {/* Spinning FGO Class Card Back with slow 3D flip */}
                     <div 
-                      className="relative z-20 w-[190px] sm:w-[230px] aspect-[1/1.62]"
+                      className="relative z-20 w-[210px] sm:w-[260px] md:w-[290px] aspect-[2/3]"
                       style={{ 
-                        animation: 'fgoCardFloatIn 5.8s cubic-bezier(0.19, 1, 0.22, 1) forwards',
+                        animation: 'fgoCardFloatIn 11.0s ease-out forwards',
                         perspective: '1000px',
                       }}
                     >
@@ -507,122 +544,54 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         className="w-full h-full relative"
                         style={{
                           transformStyle: 'preserve-3d',
-                          animation: 'fgoCardFlipY 5.8s cubic-bezier(0.25, 1, 0.5, 1) forwards'
+                          animation: 'fgoCardSpinRoulette 11.0s linear forwards'
                         }}
                       >
                         {/* CARD BACK (shown first, face up until flip) */}
-                        <div className="absolute inset-0 backface-hidden rounded-2xl flex flex-col justify-between p-4 border-4 border-yellow-500 bg-[#0e0c1f] shadow-[0_0_50px_rgba(234,179,8,0.5)] overflow-hidden">
-                          {/* Detailed Gold Card Corners */}
-                          <div className="absolute top-1 left-1 w-6 h-6 border-t-2 border-l-2 border-yellow-400 rounded-tl-md" />
-                          <div className="absolute top-1 right-1 w-6 h-6 border-t-2 border-r-2 border-yellow-400 rounded-tr-md" />
-                          <div className="absolute bottom-1 left-1 w-6 h-6 border-b-2 border-l-2 border-yellow-400 rounded-bl-md" />
-                          <div className="absolute bottom-1 right-1 w-6 h-6 border-b-2 border-r-2 border-yellow-400 rounded-br-md" />
-                          
-                          {/* Runic Frame Borders */}
-                          <div className="absolute inset-2 border border-yellow-500/40 rounded-xl bg-[radial-gradient(ellipse_at_center,rgba(67,56,202,0.35)_0%,transparent_85%)] flex flex-col items-center justify-between py-6">
-                            
-                            {/* Title Badge: Baby Class */}
-                            <div className="text-[10px] font-black tracking-[0.3em] text-yellow-400 uppercase font-mono bg-indigo-950/90 px-3 py-1 rounded border border-yellow-500/50">
-                              BABY CLASS
-                            </div>
-
-                            {/* Centered Class Symbol (Baby Boy/Girl Mystics) */}
-                            <div className="relative w-20 h-20 flex items-center justify-center">
-                              <div className="absolute inset-0 rounded-full border-2 border-double border-yellow-400/60 animate-spin" style={{ animationDuration: '12s' }} />
-                              <div className="absolute inset-2 rounded-full border border-dashed border-indigo-400/40 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }} />
-                              
-                              {/* Pulsing baby emoji with gold glow */}
-                              <span className="text-4xl filter drop-shadow-[0_0_15px_rgba(234,179,8,0.9)] animate-pulse">👶</span>
-                            </div>
-
-                            {/* Footer Inscriptions */}
-                            <div className="text-center">
-                              <div className="text-yellow-400 text-xs font-serif tracking-[0.2em] font-extrabold uppercase">
-                                Grand Gender
-                              </div>
-                              <div className="text-[8px] text-indigo-300 font-mono tracking-widest mt-1 opacity-90 uppercase">
-                                No. 777 / SUMMON
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Glossy card gleam effect */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
+                        <div 
+                          className="absolute inset-0 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.5)] bg-slate-950 border border-amber-400/30"
+                          style={{ backfaceVisibility: 'hidden' }}
+                        >
+                          <img 
+                            src={babyImage} 
+                            alt="Fate Card Back" 
+                            className="w-full h-full object-cover object-center rounded-2xl"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
 
-                        {/* CARD FRONT (shown after 180deg flip) */}
+                        {/* CARD FRONT (hidden initially, flipped 180deg) */}
                         <div 
-                          className="absolute inset-0 backface-hidden rounded-2xl flex flex-col justify-between p-4 border-4 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.7)] overflow-hidden"
+                          className="absolute inset-0 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.7)] bg-slate-950 border border-amber-400/30"
                           style={{
+                            backfaceVisibility: 'hidden',
                             transform: 'rotateY(180deg)',
-                            background: siteConfig.actualGender === '男寶'
-                              ? 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #1d4ed8 70%, #020617 100%)'
-                              : 'linear-gradient(135deg, #180018 0%, #4c0519 30%, #9d174d 70%, #180018 100%)'
                           }}
                         >
-                          {/* Sparkle overlay based on boy/girl */}
-                          <div className={`absolute inset-0 opacity-40 mix-blend-screen pointer-events-none bg-cover bg-center ${
-                            siteConfig.actualGender === '男寶' 
-                              ? 'bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.3)_0%,transparent_70%)]' 
-                              : 'bg-[radial-gradient(circle_at_center,rgba(244,114,182,0.3)_0%,transparent_70%)]'
-                          }`} />
-
-                          {/* Detailed Gold Card Corners */}
-                          <div className="absolute top-1 left-1 w-6 h-6 border-t-2 border-l-2 border-yellow-400 rounded-tl-md z-10" />
-                          <div className="absolute top-1 right-1 w-6 h-6 border-t-2 border-r-2 border-yellow-400 rounded-tr-md z-10" />
-                          <div className="absolute bottom-1 left-1 w-6 h-6 border-b-2 border-l-2 border-yellow-400 rounded-bl-md z-10" />
-                          <div className="absolute bottom-1 right-1 w-6 h-6 border-b-2 border-r-2 border-yellow-400 rounded-br-md z-10" />
-
-                          {/* Runic Frame Borders */}
-                          <div className={`absolute inset-2 border rounded-xl flex flex-col items-center justify-between py-5 z-10 ${
-                            siteConfig.actualGender === '男寶' 
-                              ? 'border-cyan-400/50 bg-slate-950/40' 
-                              : 'border-pink-400/50 bg-rose-950/40'
-                          }`}>
-                            
-                            {/* Class Badge */}
-                            <div className={`text-[11px] font-black tracking-[0.25em] text-yellow-300 uppercase font-serif px-3 py-0.5 rounded border ${
-                              siteConfig.actualGender === '男寶' 
-                                ? 'bg-blue-950/90 border-blue-400/50' 
-                                : 'bg-pink-950/90 border-pink-400/50'
-                            }`}>
-                              {siteConfig.actualGender === '男寶' ? '⚔️ SABER BOY' : '🪄 CASTER GIRL'}
-                            </div>
-
-                            {/* 5-Star SSR Emblem */}
-                            <div className="flex items-center gap-0.5 text-xs text-yellow-400 font-extrabold filter drop-shadow-[0_1px_4px_rgba(234,179,8,0.7)]">
-                              ★ ★ ★ ★ ★ <span className="ml-1 text-[9px] bg-yellow-400 text-black px-1 rounded-sm py-0.2 select-none font-sans font-black">SSR</span>
-                            </div>
-
-                            {/* Main Character Avatar */}
-                            <div className="relative w-22 h-22 flex items-center justify-center rounded-full bg-slate-900/60 border border-yellow-400/40 shadow-lg">
-                              <div className={`absolute inset-0 rounded-full border border-dashed animate-spin ${
-                                siteConfig.actualGender === '男寶' ? 'border-cyan-400/40' : 'border-pink-400/40'
-                              }`} style={{ animationDuration: '8s' }} />
-                              
-                              <span className="text-5xl filter drop-shadow-[0_2px_15px_rgba(255,255,255,0.4)] z-10 select-none animate-[bounce_2s_infinite]">
-                                {siteConfig.actualGender === '男寶' ? '👦' : '👧'}
-                              </span>
-
-                              <div className="absolute -bottom-1.5 bg-yellow-400 text-[10px] text-slate-950 px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow">
-                                {siteConfig.actualGender === '男寶' ? 'MALE' : 'FEMALE'}
-                              </div>
-                            </div>
-
-                            {/* Level & Stats Panel */}
-                            <div className="text-center w-full px-2">
-                              <div className="text-[10px] text-yellow-300 font-bold tracking-wider font-mono">
-                                LV. 99 / 99
-                              </div>
-                              <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] font-mono font-bold text-gray-300 bg-black/50 py-1 px-2 rounded-md border border-white/5">
-                                <span className="text-rose-400">HP <span className="text-white">99999</span></span>
-                                <span className="text-cyan-400">ATK <span className="text-white">99999</span></span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Golden shimmer shine */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
+                          <img 
+                            src={babyGirlIcon} 
+                            alt="Fate Card Girl Base" 
+                            className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
+                            referrerPolicy="no-referrer"
+                          />
+                          <img 
+                            src={babyBoyIcon} 
+                            alt="Fate Card Boy" 
+                            className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
+                            style={{ animation: 'boyFlash 11.0s linear forwards' }}
+                            referrerPolicy="no-referrer"
+                          />
+                          <img 
+                            src={siteConfig.actualGender === '男寶' ? babyBoyIcon : babyGirlIcon} 
+                            alt="Fate Card Final" 
+                            className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
+                            style={{ animation: 'finalFlash 11.0s linear forwards' }}
+                            referrerPolicy="no-referrer"
+                          />
+                          <div 
+                            className="absolute inset-0 bg-white"
+                            style={{ animation: 'whiteFlash 11.0s linear forwards' }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -697,7 +666,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
                     {/* FGO Class Card - statically flipped over to front face */}
                     <div 
-                      className="relative z-20 w-[190px] sm:w-[230px] aspect-[1/1.62]"
+                      className="relative z-20 w-[210px] sm:w-[260px] md:w-[290px] aspect-[2/3]"
                       style={{ 
                         perspective: '1000px',
                       }}
@@ -712,77 +681,17 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       >
                         {/* CARD FRONT (shown because of 180deg flip) */}
                         <div 
-                          className="absolute inset-0 backface-hidden rounded-2xl flex flex-col justify-between p-4 border-4 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.7)] overflow-hidden"
+                          className="absolute inset-0 backface-hidden rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.7)] bg-slate-950 border border-amber-400/30"
                           style={{
                             transform: 'rotateY(180deg)',
-                            background: siteConfig.actualGender === '男寶'
-                              ? 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #1d4ed8 70%, #020617 100%)'
-                              : 'linear-gradient(135deg, #180018 0%, #4c0519 30%, #9d174d 70%, #180018 100%)'
                           }}
                         >
-                          {/* Sparkle overlay based on boy/girl */}
-                          <div className={`absolute inset-0 opacity-40 mix-blend-screen pointer-events-none bg-cover bg-center ${
-                            siteConfig.actualGender === '男寶' 
-                              ? 'bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.3)_0%,transparent_70%)]' 
-                              : 'bg-[radial-gradient(circle_at_center,rgba(244,114,182,0.3)_0%,transparent_70%)]'
-                          }`} />
-
-                          {/* Detailed Gold Card Corners */}
-                          <div className="absolute top-1 left-1 w-6 h-6 border-t-2 border-l-2 border-yellow-400 rounded-tl-md z-10" />
-                          <div className="absolute top-1 right-1 w-6 h-6 border-t-2 border-r-2 border-yellow-400 rounded-tr-md z-10" />
-                          <div className="absolute bottom-1 left-1 w-6 h-6 border-b-2 border-l-2 border-yellow-400 rounded-bl-md z-10" />
-                          <div className="absolute bottom-1 right-1 w-6 h-6 border-b-2 border-r-2 border-yellow-400 rounded-br-md z-10" />
-
-                          {/* Runic Frame Borders */}
-                          <div className={`absolute inset-2 border rounded-xl flex flex-col items-center justify-between py-5 z-10 ${
-                            siteConfig.actualGender === '男寶' 
-                              ? 'border-cyan-400/50 bg-slate-950/40' 
-                              : 'border-pink-400/50 bg-rose-950/40'
-                          }`}>
-                            
-                            {/* Class Badge */}
-                            <div className={`text-[11px] font-black tracking-[0.25em] text-yellow-300 uppercase font-serif px-3 py-0.5 rounded border ${
-                              siteConfig.actualGender === '男寶' 
-                                ? 'bg-blue-950/90 border-blue-400/50' 
-                                : 'bg-pink-950/90 border-pink-400/50'
-                            }`}>
-                              {siteConfig.actualGender === '男寶' ? '⚔️ SABER BOY' : '🪄 CASTER GIRL'}
-                            </div>
-
-                            {/* 5-Star SSR Emblem */}
-                            <div className="flex items-center gap-0.5 text-xs text-yellow-400 font-extrabold filter drop-shadow-[0_1px_4px_rgba(234,179,8,0.7)]">
-                              ★ ★ ★ ★ ★ <span className="ml-1 text-[9px] bg-yellow-400 text-black px-1 rounded-sm py-0.2 select-none font-sans font-black">SSR</span>
-                            </div>
-
-                            {/* Main Character Avatar */}
-                            <div className="relative w-22 h-22 flex items-center justify-center rounded-full bg-slate-900/60 border border-yellow-400/40 shadow-lg">
-                              <div className={`absolute inset-0 rounded-full border border-dashed animate-spin ${
-                                siteConfig.actualGender === '男寶' ? 'border-cyan-400/40' : 'border-pink-400/40'
-                              }`} style={{ animationDuration: '8s' }} />
-                              
-                              <span className="text-5xl filter drop-shadow-[0_2px_15px_rgba(255,255,255,0.4)] z-10 select-none animate-[bounce_2s_infinite]">
-                                {siteConfig.actualGender === '男寶' ? '👦' : '👧'}
-                              </span>
-
-                              <div className="absolute -bottom-1.5 bg-yellow-400 text-[10px] text-slate-950 px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow">
-                                {siteConfig.actualGender === '男寶' ? 'MALE' : 'FEMALE'}
-                              </div>
-                            </div>
-
-                            {/* Level & Stats Panel */}
-                            <div className="text-center w-full px-2">
-                              <div className="text-[10px] text-yellow-300 font-bold tracking-wider font-mono">
-                                LV. 99 / 99
-                              </div>
-                              <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] font-mono font-bold text-gray-300 bg-black/50 py-1 px-2 rounded-md border border-white/5">
-                                <span className="text-rose-400">HP <span className="text-white">99999</span></span>
-                                <span className="text-cyan-400">ATK <span className="text-white">99999</span></span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Golden shimmer shine */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
+                          <img 
+                            src={siteConfig.actualGender === '男寶' ? babyBoyIcon : babyGirlIcon} 
+                            alt="Fate Card Front" 
+                            className="w-full h-full object-cover object-center rounded-2xl"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
                       </div>
                     </div>

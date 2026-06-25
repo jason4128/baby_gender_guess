@@ -46,7 +46,7 @@ export const themes: Theme[] = [
   },
   {
     id: 'casino-gold',
-    name: '皇家威尼斯娛樂城 👑 (熱門賭神版)',
+    name: '皇家娛樂城 👑 (熱門賭神版)',
     emoji: '🎰',
     colors: {
       '--color-primary': '#ffd700',

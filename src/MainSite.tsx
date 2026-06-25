@@ -178,7 +178,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           }
         }, 1000);
       }, 4000);
-    }, 11000);
+    }, 10000);
   };
 
   const handleStartDraw = (isAuto = false) => {
@@ -368,7 +368,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 {isGambling ? "🎰 澳門現場即時派彩盤口 👑" : "🎉 期待已久的揭曉時刻 👶"}
               </div>
               <h2 className="text-[28px] sm:text-[36px] font-extrabold text-[var(--color-primary-dark)] mb-6">
-                {isGambling ? "威尼斯人・寶寶性別開獎大廳" : "寶寶性別正式揭曉與幸運抽獎"}
+                {isGambling ? "寶寶性別開獎大廳" : "寶寶性別正式揭曉與幸運抽獎"}
               </h2>
 
               {/* Phase 1: Gender Reveal Container */}
@@ -395,7 +395,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                   </div>
                 )}
 
-                {revealState === 'revealing' && (
+                {showOnlyReveal && (
                   <div className="bg-slate-950 border border-indigo-950 rounded-3xl p-6 md:p-10 flex flex-col items-center justify-center min-h-[500px] overflow-hidden relative shadow-[0_0_50px_rgba(140,111,232,0.3)] select-none">
                     <style>{`
                       @keyframes fgoSpinClockwise {
@@ -416,52 +416,66 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         100% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
                       }
                       @keyframes fgoCardFloatIn {
-                        0% { transform: scale(0) translateY(50px); opacity: 0; }
+                        0% { transform: scale(0.5) translateY(-200px); opacity: 0; }
                         10% { transform: scale(1) translateY(0); opacity: 1; }
                         100% { transform: scale(1) translateY(0); opacity: 1; }
                       }
+                      @keyframes fgoCardHover {
+                        0%, 100% { transform: scale(1) translateY(0px) rotateY(180deg); }
+                        50% { transform: scale(1) translateY(-12px) rotateY(180deg); }
+                      }
                       @keyframes fgoCardSpinRoulette {
-                        0% { transform: rotateY(0deg); filter: brightness(3); }
-                        10% { transform: rotateY(180deg); filter: brightness(1); }
-                        20% { transform: rotateY(360deg); }
-                        28% { transform: rotateY(540deg); }
-                        36% { transform: rotateY(720deg); }
-                        42% { transform: rotateY(900deg); }
-                        48% { transform: rotateY(1080deg); }
-                        53% { transform: rotateY(1260deg); }
-                        58% { transform: rotateY(1440deg); }
-                        62% { transform: rotateY(1620deg); }
-                        66% { transform: rotateY(1800deg); }
-                        69% { transform: rotateY(1980deg); }
-                        72% { transform: rotateY(2160deg); }
-                        74% { transform: rotateY(2340deg); }
-                        76% { transform: rotateY(2520deg); }
-                        78% { transform: rotateY(2700deg); }
-                        80% { transform: rotateY(2880deg); filter: brightness(1); }
-                        81.5% { transform: scale(1.05) rotateY(3150deg); filter: brightness(5) drop-shadow(0 0 50px #fff); }
-                        83% { transform: scale(1.1) rotateY(3420deg); filter: brightness(15) drop-shadow(0 0 100px #fff); }
-                        100% { transform: scale(1) rotateY(3420deg); filter: brightness(1) drop-shadow(0 0 20px gold); }
+                        0% { transform: rotateY(0deg); }
+                        5% { transform: rotateY(180deg); }
+                        10% { transform: rotateY(360deg); }
+                        15% { transform: rotateY(540deg); }
+                        20% { transform: rotateY(720deg); }
+                        25% { transform: rotateY(900deg); }
+                        30% { transform: rotateY(1080deg); }
+                        35% { transform: rotateY(1260deg); }
+                        40% { transform: rotateY(1440deg); }
+                        43% { transform: rotateY(1620deg); }
+                        46% { transform: rotateY(1800deg); }
+                        49% { transform: rotateY(1980deg); }
+                        52% { transform: rotateY(2160deg); }
+                        55% { transform: rotateY(2340deg); }
+                        58% { transform: rotateY(2520deg); }
+                        61% { transform: rotateY(2700deg); }
+                        64% { transform: rotateY(2880deg); }
+                        66% { transform: rotateY(3060deg); }
+                        68% { transform: rotateY(3240deg); }
+                        70% { transform: rotateY(3420deg); }
+                        72% { transform: rotateY(3600deg); }
+                        74% { transform: rotateY(3780deg); }
+                        76% { transform: rotateY(3960deg); }
+                        78% { transform: rotateY(4140deg); }
+                        80% { transform: rotateY(4320deg); filter: brightness(1) drop-shadow(0 0 10px gold); }
+                        85% { transform: scale(1.1) rotateY(5220deg); filter: brightness(2) drop-shadow(0 0 50px white); }
+                        100% { transform: scale(1) rotateY(5220deg); filter: brightness(1) drop-shadow(0 0 20px gold); }
                       }
                       @keyframes whiteFlash {
                         0%, 80% { opacity: 0; }
-                        82%, 85% { opacity: 1; }
+                        84%, 86% { opacity: 1; }
                         100% { opacity: 0; }
                       }
-                      @keyframes boyFlash {
-                        0%, 19.9% { opacity: 1; }
-                        20%, 35.9% { opacity: 0; }
-                        36%, 47.9% { opacity: 1; }
-                        48%, 57.9% { opacity: 0; }
-                        58%, 65.9% { opacity: 1; }
-                        66%, 71.9% { opacity: 0; }
-                        72%, 75.9% { opacity: 1; }
-                        76%, 78.9% { opacity: 0; }
-                        79%, 80.9% { opacity: 1; }
+                      @keyframes girlFlash {
+                        0%, 9.9% { opacity: 0; }
+                        10%, 19.9% { opacity: 1; }
+                        20%, 29.9% { opacity: 0; }
+                        30%, 39.9% { opacity: 1; }
+                        40%, 45.9% { opacity: 0; }
+                        46%, 51.9% { opacity: 1; }
+                        52%, 57.9% { opacity: 0; }
+                        58%, 63.9% { opacity: 1; }
+                        64%, 67.9% { opacity: 0; }
+                        68%, 71.9% { opacity: 1; }
+                        72%, 75.9% { opacity: 0; }
+                        76%, 80.9% { opacity: 1; }
                         81%, 100% { opacity: 0; }
                       }
                       @keyframes finalFlash {
-                        0%, 82.9% { opacity: 0; }
-                        83%, 100% { opacity: 1; }
+                        0%, 80.9% { opacity: 0; }
+                        81%, 100% { opacity: 1; }
                       }
                       @keyframes fgoSparkleFloat {
                         0% { transform: translateY(120px) scale(0); opacity: 0; }
@@ -483,34 +497,49 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     <div className="absolute inset-0 bg-[#070514] opacity-100 z-0" />
                     
                     {/* Glowing nebulas based on flashing gender state to create tension */}
-                    <div className={`absolute inset-0 opacity-25 transition-all duration-1000 z-0 blur-3xl ${
-                      revealedGenderFlashing === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent'
+                    <div className={`absolute inset-0 transition-all duration-1000 z-0 blur-3xl ${
+                      revealState === 'revealed'
+                        ? 'opacity-40 ' + (siteConfig.actualGender === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent')
+                        : 'opacity-25 ' + (revealedGenderFlashing === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent')
                     }`} />
 
                     {/* Concentric spinning runic arrays (FGO style) */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] aspect-square pointer-events-none z-10">
-                      {/* Outer spinning dash array with gold/pink/blue border */}
-                      <div 
-                        className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/40 rounded-full w-full h-full"
-                        style={{ animation: 'fgoSpinClockwise 9.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
-                      >
-                        <div className="absolute inset-2 border-2 border-indigo-400/30 rounded-full flex items-center justify-center">
-                           <div className="text-yellow-400/35 text-[9px] font-mono tracking-[0.55em] uppercase w-full text-center rotate-45 select-none font-black">
-                            ✦ BABY REVEAL SUMMONING SYSTEM ✦
+                      
+                      {/* Fast spinning arrays (revealing) */}
+                      <div className={`absolute inset-0 transition-opacity duration-1000 ${revealState === 'revealed' ? 'opacity-0' : 'opacity-100'}`}>
+                        <div 
+                          className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/40 rounded-full w-full h-full"
+                          style={{ animation: 'fgoSpinClockwise 9.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                        >
+                          <div className="absolute inset-2 border-2 border-indigo-400/30 rounded-full flex items-center justify-center">
+                             <div className="text-yellow-400/35 text-[9px] font-mono tracking-[0.55em] uppercase w-full text-center rotate-45 select-none font-black">
+                              ✦ BABY REVEAL SUMMONING SYSTEM ✦
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      {/* Middle counter-rotating rune circle */}
-                      <div 
-                        className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/50 rounded-full w-[82%] h-[82%]"
-                        style={{ animation: 'fgoSpinCounterClockwise 8.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
-                      >
-                        <div className="absolute inset-4 border border-dashed border-pink-400/20 rounded-full" />
+                        <div 
+                          className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/50 rounded-full w-[82%] h-[82%]"
+                          style={{ animation: 'fgoSpinCounterClockwise 8.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                        >
+                          <div className="absolute inset-4 border border-dashed border-pink-400/20 rounded-full" />
+                        </div>
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl animate-pulse" />
                       </div>
 
-                      {/* Deep internal glow core */}
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl animate-pulse" />
+                      {/* Slow spinning arrays (revealed) */}
+                      <div className={`absolute inset-0 transition-opacity duration-1000 ${revealState === 'revealed' ? 'opacity-75' : 'opacity-0'}`}>
+                        <div 
+                          className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/20 rounded-full w-full h-full animate-[spin_60s_linear_infinite]"
+                          style={{ transform: 'translate(-50%, -50%)' }}
+                        >
+                          <div className="absolute inset-2 border-2 border-indigo-400/10 rounded-full flex items-center justify-center" />
+                        </div>
+                        <div 
+                          className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/20 rounded-full w-[82%] h-[82%] animate-[spin_40s_linear_infinite]"
+                          style={{ transform: 'translate(-50%, -50%)', animationDirection: 'reverse' }}
+                        />
+                      </div>
                     </div>
 
                     {/* Giant Pillar of Light summoning beam */}
@@ -536,7 +565,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     <div 
                       className="relative z-20 w-[210px] sm:w-[260px] md:w-[290px] aspect-[2/3]"
                       style={{ 
-                        animation: 'fgoCardFloatIn 11.0s ease-out forwards',
+                        animation: revealState === 'revealed' ? 'fgoCardHover 4s ease-in-out infinite' : 'fgoCardFloatIn 11.0s ease-out forwards',
                         perspective: '1000px',
                       }}
                     >
@@ -544,7 +573,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         className="w-full h-full relative"
                         style={{
                           transformStyle: 'preserve-3d',
-                          animation: 'fgoCardSpinRoulette 11.0s linear forwards'
+                          animation: revealState === 'revealed' ? 'none' : 'fgoCardSpinRoulette 11.0s linear forwards',
+                          transform: revealState === 'revealed' ? 'rotateY(180deg)' : undefined
                         }}
                       >
                         {/* CARD BACK (shown first, face up until flip) */}
@@ -569,29 +599,31 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                           }}
                         >
                           <img 
-                            src={babyGirlIcon} 
-                            alt="Fate Card Girl Base" 
+                            src={babyBoyIcon} 
+                            alt="Fate Card Boy Base" 
                             className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
                             referrerPolicy="no-referrer"
                           />
                           <img 
-                            src={babyBoyIcon} 
-                            alt="Fate Card Boy" 
+                            src={babyGirlIcon} 
+                            alt="Fate Card Girl" 
                             className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
-                            style={{ animation: 'boyFlash 11.0s linear forwards' }}
+                            style={{ animation: revealState === 'revealed' ? 'none' : 'girlFlash 10.0s linear forwards', opacity: revealState === 'revealed' ? 0 : 1 }}
                             referrerPolicy="no-referrer"
                           />
                           <img 
                             src={siteConfig.actualGender === '男寶' ? babyBoyIcon : babyGirlIcon} 
                             alt="Fate Card Final" 
                             className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
-                            style={{ animation: 'finalFlash 11.0s linear forwards' }}
+                            style={{ animation: revealState === 'revealed' ? 'none' : 'finalFlash 10.0s linear forwards', opacity: revealState === 'revealed' ? 1 : 0 }}
                             referrerPolicy="no-referrer"
                           />
-                          <div 
-                            className="absolute inset-0 bg-white"
-                            style={{ animation: 'whiteFlash 11.0s linear forwards' }}
-                          />
+                          {revealState === 'revealing' && (
+                            <div 
+                              className="absolute inset-0 bg-white"
+                              style={{ animation: 'whiteFlash 10.0s linear forwards' }}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -616,121 +648,32 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     </div>
 
                     {/* Bottom Status panel */}
-                    <div className="relative z-20 mt-8 text-center max-w-md">
-                      <h3 className="text-xl sm:text-2xl font-black text-yellow-300 font-serif tracking-[0.15em] animate-pulse drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
-                        {isGambling ? "🎰 聖晶石卡池・寶寶性別召喚中..." : "🔮 聖杯儀式・寶寶性別召喚中..."}
-                      </h3>
-                      <p className="text-indigo-200 text-xs sm:text-sm font-medium mt-2 tracking-wide leading-relaxed bg-indigo-950/60 border border-indigo-900/40 px-5 py-2.5 rounded-full shadow-inner max-w-xs sm:max-w-none mx-auto">
-                        ✨ 正在與根源記錄核對性別因果律，請屏息以待！
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {revealState === 'revealed' && (
-                  <div className="bg-slate-950 border border-indigo-950 rounded-3xl p-6 md:p-10 flex flex-col items-center justify-center min-h-[500px] overflow-hidden relative shadow-[0_0_50px_rgba(140,111,232,0.3)] select-none">
-                    <style>{`
-                      @keyframes fgoCardHover {
-                        0%, 100% { transform: translateY(0px) rotateY(180deg); }
-                        50% { transform: translateY(-12px) rotateY(180deg); }
-                      }
-                      @keyframes fgoSparkleFloat {
-                        0% { transform: translateY(120px) scale(0); opacity: 0; }
-                        40% { opacity: 1; }
-                        100% { transform: translateY(-160px) scale(1.3); opacity: 0; }
-                      }
-                    `}</style>
-                    
-                    {/* Dark Cosmic Void Background */}
-                    <div className="absolute inset-0 bg-[#070514] opacity-100 z-0" />
-                    
-                    {/* Glowing nebulas based on actual gender */}
-                    <div className={`absolute inset-0 opacity-40 transition-all duration-1000 z-0 blur-3xl ${
-                      siteConfig.actualGender === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent'
-                    }`} />
-
-                    {/* Concentric spinning runic arrays (Gently rotating in revealed state) */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] aspect-square pointer-events-none z-10 opacity-75">
-                      <div 
-                        className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/20 rounded-full w-full h-full animate-[spin_60s_linear_infinite]"
-                        style={{ transform: 'translate(-50%, -50%)' }}
-                      >
-                        <div className="absolute inset-2 border-2 border-indigo-400/10 rounded-full flex items-center justify-center" />
+                    <div className="relative z-20 mt-8 text-center w-full max-w-md h-[180px]">
+                      <div className={`absolute top-0 left-0 w-full transition-opacity duration-500 ${revealState === 'revealing' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <h3 className="text-xl sm:text-2xl font-black text-yellow-300 font-serif tracking-[0.15em] animate-pulse drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                          {isGambling ? "🎰 聖晶石卡池・寶寶性別召喚中..." : "🔮 聖杯儀式・寶寶性別召喚中..."}
+                        </h3>
+                        <p className="text-indigo-200 text-xs sm:text-sm font-medium mt-2 tracking-wide leading-relaxed bg-indigo-950/60 border border-indigo-900/40 px-5 py-2.5 rounded-full shadow-inner max-w-xs sm:max-w-none mx-auto">
+                          ✨ 正在與根源記錄核對性別因果律，請屏息以待！
+                        </p>
                       </div>
-                      
-                      <div 
-                        className="absolute left-1/2 top-1/2 border-2 border-double border-cyan-400/20 rounded-full w-[82%] h-[82%] animate-[spin_40s_linear_infinite]"
-                        style={{ transform: 'translate(-50%, -50%)', animationDirection: 'reverse' }}
-                      />
-                    </div>
 
-                    {/* FGO Class Card - statically flipped over to front face */}
-                    <div 
-                      className="relative z-20 w-[210px] sm:w-[260px] md:w-[290px] aspect-[2/3]"
-                      style={{ 
-                        perspective: '1000px',
-                      }}
-                    >
-                      <div 
-                        className="w-full h-full relative"
-                        style={{
-                          transformStyle: 'preserve-3d',
-                          transform: 'rotateY(180deg)',
-                          animation: 'fgoCardHover 4s ease-in-out infinite'
-                        }}
-                      >
-                        {/* CARD FRONT (shown because of 180deg flip) */}
-                        <div 
-                          className="absolute inset-0 backface-hidden rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.7)] bg-slate-950 border border-amber-400/30"
-                          style={{
-                            transform: 'rotateY(180deg)',
-                          }}
-                        >
-                          <img 
-                            src={siteConfig.actualGender === '男寶' ? babyBoyIcon : babyGirlIcon} 
-                            alt="Fate Card Front" 
-                            className="w-full h-full object-cover object-center rounded-2xl"
-                            referrerPolicy="no-referrer"
-                          />
+                      <div className={`absolute top-0 left-0 w-full transition-opacity duration-1000 delay-300 ${revealState === 'revealed' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <div className="text-sm font-extrabold text-amber-400 mb-2 uppercase tracking-widest font-mono">
+                          🏆 SUMMON REVEAL SUCCESS 🏆
                         </div>
+                        <h3 className={`text-3xl sm:text-4xl font-black tracking-wider mb-3 filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${
+                          siteConfig.actualGender === '男寶' ? 'text-cyan-300' : 'text-pink-300'
+                        }`}>
+                          恭喜！召喚出 SSR {siteConfig.actualGender || "女寶"}！
+                        </h3>
+                        <p className="text-gray-300 text-xs sm:text-sm font-semibold leading-relaxed bg-black/60 border border-indigo-950 px-6 py-3.5 rounded-2xl shadow-xl max-w-xs sm:max-w-none mx-auto text-center">
+                          {siteConfig.actualGender === '男寶' 
+                            ? (isGambling ? "🎰 買中藍方【男寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【男寶】的親朋好友們，你們太厲害、太神準了！🎉")
+                            : (isGambling ? "🎰 買中紅方【女寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【女寶】的親朋好友們，你們太厲害、太神準了！🎉")
+                          }
+                        </p>
                       </div>
-                    </div>
-
-                    {/* Magic sparkles floating upwards */}
-                    <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                      {[...Array(20)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className="absolute text-yellow-400/80 font-mono text-sm select-none"
-                          style={{
-                            left: `${Math.random() * 90 + 5}%`,
-                            bottom: '-10%',
-                            animation: 'fgoSparkleFloat 5s linear infinite',
-                            animationDelay: `${Math.random() * 4}s`,
-                            animationDuration: `${Math.random() * 3 + 3}s`
-                          }}
-                        >
-                          {['✦', '✧', '★', '☆', '⚛', '𖦹', '🌸', '✨', '💙', '💖'][Math.floor(Math.random() * 10)]}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Bottom Status panel */}
-                    <div className="relative z-20 mt-8 text-center max-w-md animate-[fadeIn_0.8s_ease-out_forwards]">
-                      <div className="text-sm font-extrabold text-amber-400 mb-2 uppercase tracking-widest font-mono">
-                        🏆 SUMMON REVEAL SUCCESS 🏆
-                      </div>
-                      <h3 className={`text-3xl sm:text-4xl font-black tracking-wider mb-3 filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${
-                        siteConfig.actualGender === '男寶' ? 'text-cyan-300' : 'text-pink-300'
-                      }`}>
-                        恭喜！召喚出 SSR {siteConfig.actualGender || "女寶"}！
-                      </h3>
-                      <p className="text-gray-300 text-xs sm:text-sm font-semibold leading-relaxed bg-black/60 border border-indigo-950 px-6 py-3.5 rounded-2xl shadow-xl max-w-xs sm:max-w-none mx-auto text-center">
-                        {siteConfig.actualGender === '男寶' 
-                          ? (isGambling ? "🎰 買中藍方【男寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【男寶】的親朋好友們，你們太厲害、太神準了！🎉")
-                          : (isGambling ? "🎰 買中紅方【女寶】的玩家獲得全額 1.95 派彩彩金！全場沸騰中！💸" : "恭喜所有猜測【女寶】的親朋好友們，你們太厲害、太神準了！🎉")
-                        }
-                      </p>
                     </div>
                   </div>
                 )}
@@ -958,7 +901,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </div>
                 <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden">
                   <img 
-                    src={siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage} 
+                    src={isGambling ? "/IMG_1604.png" : (siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage)} 
                     alt="Baby" 
                     className="w-full h-full object-cover" 
                     referrerPolicy="no-referrer" 
@@ -1357,7 +1300,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
         <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
           <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 text-center" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
             <h3 className="text-2xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
-              {isGambling ? "👑 澳門威尼斯人與您共度溫馨時刻 🍼" : "謝謝你參與我們的小活動 🍼"}
+              {isGambling ? "👑 皇家娛樂城與您共度溫馨時刻 🍼" : "謝謝你參與我們的小活動 🍼"}
             </h3>
             <p className="text-[var(--color-muted)] leading-[1.85] mb-3.5 font-medium">
               {isGambling 

@@ -533,7 +533,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
       <div className="flex justify-between items-center gap-4 flex-wrap mb-6">
         <div>
           <h1 className="text-[var(--color-primary-dark)] text-3xl font-bold mb-2">
-            {isGambling ? "🎰 威尼斯人娛樂城・莊家風控後台 👑" : "猜寶寶性別｜管理後台 💜"}
+            {isGambling ? "🎰 皇家娛樂城・莊家風控後台 👑" : "猜寶寶性別｜管理後台 💜"}
           </h1>
           <p className="text-[var(--color-muted)] leading-relaxed">
             {isGambling 

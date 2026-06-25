@@ -935,7 +935,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </div>
                 <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden">
                   <img 
-                    src={isGambling ? "/IMG_1604.png" : (siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage)} 
+                    src={isGambling ? `${import.meta.env.BASE_URL}IMG_1604.png` : (siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage)} 
                     alt="Baby" 
                     className="w-full h-full object-cover" 
                     referrerPolicy="no-referrer" 

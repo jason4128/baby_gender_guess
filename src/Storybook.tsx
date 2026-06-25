@@ -9,7 +9,7 @@ export default function Storybook({ onComplete }: StorybookProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const totalPages = 9; // 0 to 8
 
-  const images = Array.from({ length: totalPages }, (_, i) => `/storybook/${i}.png`);
+  const images = Array.from({ length: totalPages }, (_, i) => `${import.meta.env.BASE_URL}storybook/${i}.png`);
 
   useEffect(() => {
     // Preload all images to prevent sluggish page turns

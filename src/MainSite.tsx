@@ -59,7 +59,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const [submitMessage, setSubmitMessage] = useState<{type: 'success'|'error', text: React.ReactNode} | null>(null);
  
   const [guesses, setGuesses] = useState<Guess[]>([]);
-  const [revealState, setRevealState] = useState<'initial' | 'revealing' | 'revealed'>('initial');
+  const [revealState, setRevealState] = useState<'initial' | 'revealing' | 'revealed' | 'finished'>('initial');
   const [drawState, setDrawState] = useState<'hidden' | 'ready' | 'drawing' | 'done'>('hidden');
   const showOnlyReveal = revealState === 'revealed' || revealState === 'revealing';
   const [rollingName, setRollingName] = useState<string>('');
@@ -305,6 +305,150 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const boyPercent = stats.total ? Math.round((stats.boy / stats.total) * 100) : 50;
   const girlPercent = stats.total ? 100 - boyPercent : 50;
 
+  const renderPhase2 = (isDarkModal: boolean) => (
+    <div className={`animate-[fadeIn_0.6s_ease-out_forwards] border-t pt-8 mt-4 text-left ${isDarkModal ? 'border-white/10' : 'border-[rgba(140,111,232,.15)]'}`}>
+      
+      {/* Correct Guessers List */}
+      <div className="mb-8">
+        <h4 className={`text-base sm:text-lg font-extrabold mb-4 flex items-center gap-2 ${isDarkModal ? 'text-white' : 'text-[var(--color-primary-dark)]'}`}>
+          <span>🎯</span> 
+          <span>猜中正確性別的玩家名單 ({guesses.filter(g => g.gender === siteConfig.actualGender).length} 人)：</span>
+        </h4>
+        {guesses.filter(g => g.gender === siteConfig.actualGender).length === 0 ? (
+          <p className="text-[var(--color-muted)] text-sm font-semibold italic">目前沒有人猜中這個性別喔 🧩</p>
+        ) : (
+          <div className={`flex flex-wrap gap-2 max-h-[140px] overflow-y-auto p-4 border rounded-2xl ${isDarkModal ? 'bg-white/5 border-white/10' : 'bg-white/10 dark:bg-slate-900/50 border-[var(--color-glass-border)]'}`}>
+            {guesses.filter(g => g.gender === siteConfig.actualGender).map((g) => (
+              <div key={g.id} className={`px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-sm flex items-center gap-1.5 ${isDarkModal ? 'bg-white/10 border-white/20 text-white' : 'bg-white dark:bg-slate-800 border-[var(--color-glass-border)] text-[var(--color-primary-dark)]'}`}>
+                <span>👶</span>
+                <span>{g.name}</span>
+                <span className="text-[10px] opacity-60 font-mono">({g.relation})</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lucky Winner Drawer */}
+      <div id="lucky-draw-container" className={`border rounded-3xl p-6 md:p-8 shadow-inner scroll-mt-24 ${isDarkModal ? 'border-white/10 bg-white/5' : 'border-[var(--color-glass-border)] bg-gradient-to-br from-[var(--color-glass-bg)] to-white/5'}`}>
+        <div className="text-center max-w-xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-extrabold bg-yellow-100 text-yellow-700 border border-yellow-200 mb-4 animate-pulse">
+            🎁 LUCKY DRAW TIME 🎁
+          </div>
+          <h4 className={`text-xl sm:text-2xl font-black mb-2 ${isDarkModal ? 'text-white' : 'text-[var(--color-primary-dark)]'}`}>幸運得主大抽獎</h4>
+          <p className={`text-xs sm:text-sm font-semibold leading-relaxed mb-6 ${isDarkModal ? 'text-gray-300' : 'text-[var(--color-muted)]'}`}>
+            得獎結果同步讀取自主辦人在後台隨機抽選、完全公平公正的幸運名單！
+          </p>
+
+          {/* Display Slot Machine Countdown or Ready Frame */}
+          {drawCountdown !== null && (
+            <div className="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-yellow-400/30 rounded-2xl p-6 mb-6 text-center overflow-hidden relative shadow-lg">
+              <style>{`
+                @keyframes popCountdown {
+                  0% { transform: scale(0.3); opacity: 0; filter: blur(3px); }
+                  50% { transform: scale(1.4); opacity: 0.9; }
+                  100% { transform: scale(1); opacity: 1; filter: blur(0); }
+                }
+                .animate-pop-countdown {
+                  animation: popCountdown 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+              `}</style>
+              <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-yellow-500 block mb-3 animate-pulse">
+                🎈 寶寶性別已揭曉！得獎名單將在 {drawCountdown} 秒後自動開抽 🎈
+              </span>
+              <div className="flex items-center justify-center h-28 relative">
+                {/* Inner ambient glowing circles */}
+                <div className="absolute w-24 h-24 rounded-full bg-amber-500/10 animate-ping" />
+                <div className="absolute w-16 h-16 rounded-full bg-amber-400/20" />
+                
+                <span 
+                  key={drawCountdown} 
+                  className="text-6xl sm:text-7xl font-black text-amber-500 font-mono tracking-widest relative z-10 animate-pop-countdown drop-shadow-[0_4px_12px_rgba(245,158,11,0.3)]"
+                >
+                  {drawCountdown}
+                </span>
+              </div>
+              
+              {/* Progress bar ticking down */}
+              <div className="w-full bg-amber-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-3 max-w-xs mx-auto">
+                <div 
+                  className="bg-amber-500 h-full transition-all duration-1000 ease-linear rounded-full" 
+                  style={{ width: `${(drawCountdown / 3) * 100}%` }} 
+                />
+              </div>
+            </div>
+          )}
+
+          {drawState === 'ready' && drawCountdown === null && (
+            <div className={`border rounded-2xl p-6 mb-6 ${isDarkModal ? 'bg-white/10 border-white/20' : 'bg-white/10 dark:bg-slate-900/60 border-[var(--color-glass-border)]'}`}>
+              <div className="text-[36px] sm:text-[48px] filter saturate-50 animate-pulse mb-3">🎰</div>
+              <p className={`text-sm font-extrabold mb-4 ${isDarkModal ? 'text-gray-300' : 'text-[var(--color-muted)]'}`}>準備好揭曉幸運得獎者了嗎？點擊下方按鈕啟動轉輪！</p>
+              <button 
+                onClick={() => handleStartDraw()}
+                disabled={!siteConfig.winners || siteConfig.winners.length === 0}
+                className={`px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer ${
+                  (!siteConfig.winners || siteConfig.winners.length === 0) ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''
+                }`}
+              >
+                🎰 開始抽取幸運得主 🎁
+              </button>
+              {(!siteConfig.winners || siteConfig.winners.length === 0) && (
+                <p className="text-xs text-red-500 font-bold mt-2.5">
+                  ⚠️ 主辦人尚未在後台完成隨機抽獎，暫時無法啟動開獎機。請靜待通知！
+                </p>
+              )}
+            </div>
+          )}
+
+          {drawState === 'drawing' && (
+            <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-4 border-yellow-400 rounded-2xl p-8 mb-6 shadow-2xl relative overflow-hidden animate-[pulse_1s_infinite]">
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(234,179,8,0.1)_2px,transparent_2px)] bg-[size:100%_24px] pointer-events-none" />
+              <div className="text-yellow-400 text-xs font-mono tracking-widest uppercase mb-2 animate-pulse">● SPINNER ACTIVE</div>
+              <div className="text-3xl sm:text-5xl font-black text-white font-mono tracking-wider animate-bounce">
+                {rollingName || "???"}
+              </div>
+              <p className="text-indigo-200/80 text-xs font-bold mt-4 animate-pulse">正在核對全場對中盤口數據，計算極致好運得主...</p>
+            </div>
+          )}
+
+          {drawState === 'done' && (
+            <div>
+              <div className={`border-2 rounded-2xl p-6 sm:p-8 mb-6 shadow-xl text-center ${isDarkModal ? 'bg-yellow-950/20 border-yellow-900' : 'bg-gradient-to-r from-amber-50/60 to-yellow-50/60 dark:from-yellow-950/10 dark:to-slate-900/50 border-yellow-300 dark:border-yellow-900/50'}`}>
+                <div className="text-5xl mb-4 animate-bounce">👑</div>
+                <h5 className="text-2xl font-extrabold text-amber-700 dark:text-amber-400 mb-4">🏆 恭喜以下幸運中獎者 🏆</h5>
+                
+                <div className="grid gap-4 max-w-lg mx-auto">
+                  {(!siteConfig.winners || siteConfig.winners.length === 0) ? (
+                    <p className={`text-sm font-semibold italic ${isDarkModal ? 'text-gray-400' : 'text-[var(--color-muted)]'}`}>暫無得獎者數據 📭</p>
+                  ) : (
+                    siteConfig.winners.map((item, idx) => (
+                      <div key={item.id || idx} className={`border rounded-xl p-4 text-left shadow-sm ${isDarkModal ? 'bg-slate-900/80 border-yellow-900/50 text-gray-200' : 'bg-white dark:bg-slate-800 border-yellow-200 dark:border-yellow-900/40 text-[var(--color-muted)]'}`}>
+                        <div className={`flex justify-between items-start gap-2 border-b pb-2 mb-2 ${isDarkModal ? 'border-slate-700' : 'border-gray-100 dark:border-slate-700'}`}>
+                          <strong className={`text-base ${isDarkModal ? 'text-white' : 'text-[var(--color-primary-dark)]'}`}>
+                            🎉 特等獎得主 {idx + 1}：{item.name}
+                          </strong>
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 font-mono shrink-0">
+                            {item.relation}
+                          </span>
+                        </div>
+                        <div className="text-xs leading-relaxed space-y-1 font-medium">
+                          <div>📞 聯絡方式：{item.contact}</div>
+                          <div>🎁 期望禮物：{item.giftWish || "—"}</div>
+                          <div className="italic text-gray-500 mt-1">✍️ 祝福留言："{item.wish || "祝寶寶健康平安"}"</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) return null;
 
   return (
@@ -395,8 +539,29 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                   </div>
                 )}
 
+                {revealState === 'finished' && (
+                  <div className="bg-white/10 dark:bg-slate-900/40 border border-[rgba(140,111,232,.3)] rounded-3xl p-8 flex flex-col items-center justify-center">
+                    <img src={siteConfig.actualGender === '男寶' ? babyBoyIcon : babyGirlIcon} className="w-[180px] sm:w-[220px] rounded-2xl shadow-[0_10px_30px_rgba(140,111,232,0.3)] mb-6" alt="Revealed Gender" />
+                    <h3 className="text-2xl sm:text-3xl font-black text-[var(--color-primary-dark)]">
+                      {isGambling ? "🎰 派彩結果：" : "🎉 揭曉結果："} 
+                      <span className={siteConfig.actualGender === '男寶' ? 'text-blue-500' : 'text-pink-500'}>
+                        {siteConfig.actualGender}
+                      </span>！
+                    </h3>
+                  </div>
+                )}
+
                 {showOnlyReveal && (
-                  <div className="bg-slate-950 border border-indigo-950 rounded-3xl p-6 md:p-10 flex flex-col items-center justify-center min-h-[500px] overflow-hidden relative shadow-[0_0_50px_rgba(140,111,232,0.3)] select-none">
+                  <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-start min-h-screen overflow-y-auto overflow-x-hidden select-none pt-16 sm:pt-24 pb-24 text-white dark">
+                    {revealState === 'revealed' && (
+                      <button 
+                        onClick={() => setRevealState('finished')} 
+                        className="fixed top-6 right-6 z-50 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white/70 hover:text-white transition-all backdrop-blur-md cursor-pointer"
+                        title="關閉開獎大廳"
+                      >
+                        ✕
+                      </button>
+                    )}
                     <style>{`
                       @keyframes fgoSpinClockwise {
                         0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); opacity: 0; }
@@ -421,8 +586,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         100% { transform: scale(1) translateY(0); opacity: 1; }
                       }
                       @keyframes fgoCardHover {
-                        0%, 100% { transform: scale(1) translateY(0px) rotateY(180deg); }
-                        50% { transform: scale(1) translateY(-12px) rotateY(180deg); }
+                        0%, 100% { transform: scale(1) translateY(0px); }
+                        50% { transform: scale(1) translateY(-12px); }
                       }
                       @keyframes fgoCardSpinRoulette {
                         0% { transform: rotateY(0deg); }
@@ -675,155 +840,24 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         </p>
                       </div>
                     </div>
+                    
+                    {revealState === 'revealed' && (
+                      <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 mt-12 relative z-20">
+                        {renderPhase2(true)}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Phase 2: Correct Guessers & Lucky Draw Carousel */}
-              {revealState === 'revealed' && (
-                <div className="animate-[fadeIn_0.6s_ease-out_forwards] border-t border-[rgba(140,111,232,.15)] pt-8 mt-4 text-left">
-                  
-                  {/* Correct Guessers List */}
-                  <div className="mb-8">
-                    <h4 className="text-base sm:text-lg font-extrabold text-[var(--color-primary-dark)] mb-4 flex items-center gap-2">
-                      <span>🎯</span> 
-                      <span>猜中正確性別的玩家名單 ({guesses.filter(g => g.gender === siteConfig.actualGender).length} 人)：</span>
-                    </h4>
-                    {guesses.filter(g => g.gender === siteConfig.actualGender).length === 0 ? (
-                      <p className="text-[var(--color-muted)] text-sm font-semibold italic">目前沒有人猜中這個性別喔 🧩</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto p-4 bg-white/10 dark:bg-slate-900/50 border border-[var(--color-glass-border)] rounded-2xl">
-                        {guesses.filter(g => g.gender === siteConfig.actualGender).map((g) => (
-                          <div key={g.id} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-800 border border-[var(--color-glass-border)] text-[var(--color-primary-dark)] shadow-sm flex items-center gap-1.5">
-                            <span>👶</span>
-                            <span>{g.name}</span>
-                            <span className="text-[10px] opacity-60 font-mono">({g.relation})</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Lucky Winner Drawer */}
-                  <div id="lucky-draw-container" className="border border-[var(--color-glass-border)] rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[var(--color-glass-bg)] to-white/5 shadow-inner scroll-mt-24">
-                    <div className="text-center max-w-xl mx-auto">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-extrabold bg-yellow-100 text-yellow-700 border border-yellow-200 mb-4 animate-pulse">
-                        🎁 LUCKY DRAW TIME 🎁
-                      </div>
-                      <h4 className="text-xl sm:text-2xl font-black text-[var(--color-primary-dark)] mb-2">幸運得主大抽獎</h4>
-                      <p className="text-[var(--color-muted)] text-xs sm:text-sm font-semibold leading-relaxed mb-6">
-                        得獎結果同步讀取自主辦人在後台隨機抽選、完全公平公正的幸運名單！
-                      </p>
-
-                      {/* Display Slot Machine Countdown or Ready Frame */}
-                      {drawCountdown !== null && (
-                        <div className="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-yellow-400/30 rounded-2xl p-6 mb-6 text-center overflow-hidden relative shadow-lg">
-                          <style>{`
-                            @keyframes popCountdown {
-                              0% { transform: scale(0.3); opacity: 0; filter: blur(3px); }
-                              50% { transform: scale(1.4); opacity: 0.9; }
-                              100% { transform: scale(1); opacity: 1; filter: blur(0); }
-                            }
-                            .animate-pop-countdown {
-                              animation: popCountdown 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-                            }
-                          `}</style>
-                          <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-yellow-500 block mb-3 animate-pulse">
-                            🎈 寶寶性別已揭曉！得獎名單將在 {drawCountdown} 秒後自動開抽 🎈
-                          </span>
-                          <div className="flex items-center justify-center h-28 relative">
-                            {/* Inner ambient glowing circles */}
-                            <div className="absolute w-24 h-24 rounded-full bg-amber-500/10 animate-ping" />
-                            <div className="absolute w-16 h-16 rounded-full bg-amber-400/20" />
-                            
-                            <span 
-                              key={drawCountdown} 
-                              className="text-6xl sm:text-7xl font-black text-amber-500 font-mono tracking-widest relative z-10 animate-pop-countdown drop-shadow-[0_4px_12px_rgba(245,158,11,0.3)]"
-                            >
-                              {drawCountdown}
-                            </span>
-                          </div>
-                          
-                          {/* Progress bar ticking down */}
-                          <div className="w-full bg-amber-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-3 max-w-xs mx-auto">
-                            <div 
-                              className="bg-amber-500 h-full transition-all duration-1000 ease-linear rounded-full" 
-                              style={{ width: `${(drawCountdown / 3) * 100}%` }} 
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {drawState === 'ready' && drawCountdown === null && (
-                        <div className="bg-white/10 dark:bg-slate-900/60 border border-[var(--color-glass-border)] rounded-2xl p-6 mb-6">
-                          <div className="text-[36px] sm:text-[48px] filter saturate-50 animate-pulse mb-3">🎰</div>
-                          <p className="text-[var(--color-muted)] text-sm font-extrabold mb-4">準備好揭曉幸運得獎者了嗎？點擊下方按鈕啟動轉輪！</p>
-                          <button 
-                            onClick={() => handleStartDraw()}
-                            disabled={!siteConfig.winners || siteConfig.winners.length === 0}
-                            className={`px-8 py-3.5 rounded-full text-sm sm:text-base font-extrabold text-white bg-gradient-to-r from-amber-500 to-yellow-500 hover:opacity-95 active:scale-95 transition-all shadow-lg hover:shadow-xl cursor-pointer ${
-                              (!siteConfig.winners || siteConfig.winners.length === 0) ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''
-                            }`}
-                          >
-                            🎰 開始抽取幸運得主 🎁
-                          </button>
-                          {(!siteConfig.winners || siteConfig.winners.length === 0) && (
-                            <p className="text-xs text-red-500 font-bold mt-2.5">
-                              ⚠️ 主辦人尚未在後台完成隨機抽獎，暫時無法啟動開獎機。請靜待通知！
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {drawState === 'drawing' && (
-                        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-4 border-yellow-400 rounded-2xl p-8 mb-6 shadow-2xl relative overflow-hidden animate-[pulse_1s_infinite]">
-                          <div className="absolute inset-0 bg-[linear-gradient(rgba(234,179,8,0.1)_2px,transparent_2px)] bg-[size:100%_24px] pointer-events-none" />
-                          <div className="text-yellow-400 text-xs font-mono tracking-widest uppercase mb-2 animate-pulse">● SPINNER ACTIVE</div>
-                          <div className="text-3xl sm:text-5xl font-black text-white font-mono tracking-wider animate-bounce">
-                            {rollingName || "???"}
-                          </div>
-                          <p className="text-indigo-200/80 text-xs font-bold mt-4 animate-pulse">正在核對全場對中盤口數據，計算極致好運得主...</p>
-                        </div>
-                      )}
-
-                      {drawState === 'done' && (
-                        <div>
-                          <div className="bg-gradient-to-r from-amber-50/60 to-yellow-50/60 dark:from-yellow-950/10 dark:to-slate-900/50 border-2 border-yellow-300 dark:border-yellow-900/50 rounded-2xl p-6 sm:p-8 mb-6 shadow-xl text-center">
-                            <div className="text-5xl mb-4 animate-bounce">👑</div>
-                            <h5 className="text-2xl font-extrabold text-amber-700 dark:text-amber-400 mb-4">🏆 恭喜以下幸運中獎者 🏆</h5>
-                            
-                            <div className="grid gap-4 max-w-lg mx-auto">
-                              {(!siteConfig.winners || siteConfig.winners.length === 0) ? (
-                                <p className="text-[var(--color-muted)] text-sm font-semibold italic">暫無得獎者數據 📭</p>
-                              ) : (
-                                siteConfig.winners.map((item, idx) => (
-                                  <div key={item.id || idx} className="bg-white dark:bg-slate-800 border border-yellow-200 dark:border-yellow-900/40 rounded-xl p-4 text-left shadow-sm">
-                                    <div className="flex justify-between items-start gap-2 border-b border-gray-100 dark:border-slate-700 pb-2 mb-2">
-                                      <strong className="text-base text-[var(--color-primary-dark)]">
-                                        🎉 特等獎得主 {idx + 1}：{item.name}
-                                      </strong>
-                                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 font-mono">
-                                        {item.relation}
-                                      </span>
-                                    </div>
-                                    <div className="text-xs text-[var(--color-muted)] leading-relaxed space-y-1 font-medium">
-                                      <div>📞 聯絡方式：{item.contact}</div>
-                                      <div>🎁 期望禮物：{item.giftWish || "—"}</div>
-                                      <div className="italic text-gray-500 mt-1">✍️ 祝福留言："{item.wish || "祝寶寶健康平安"}"</div>
-                                    </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-
-                            {/* Replay button removed per user request */}
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  </div>
-
+              {(revealState === 'revealed' || revealState === 'finished') && (
+                <div className="mt-10 p-6 md:p-8 rounded-[24px] bg-slate-950 text-white shadow-2xl relative overflow-hidden border border-indigo-900/30 text-left">
+                   <div className="absolute inset-0 bg-[#070514] opacity-100 pointer-events-none" />
+                   <div className="absolute inset-0 transition-opacity duration-1000 z-0 blur-3xl pointer-events-none opacity-30 bg-gradient-to-tr from-indigo-900 via-purple-900 to-transparent" />
+                   <div className="relative z-10">
+                     {renderPhase2(true)}
+                   </div>
                 </div>
               )}
 

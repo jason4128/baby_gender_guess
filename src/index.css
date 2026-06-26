@@ -41,18 +41,21 @@ body {
 
 .bubble {
   position: absolute;
-  border-radius: 999px;
-  background: var(--color-glass-border, rgba(255, 255, 255, .35));
   animation: floatY 8s ease-in-out infinite;
-  backdrop-filter: blur(3px);
-  opacity: 0.6;
+  opacity: 0.4;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: var(--color-glass-border, rgba(255, 255, 255, .35));
 }
 
-.b1 { width: 120px; height: 120px; left: 6%; top: 12%; }
-.b2 { width: 80px; height: 80px; right: 10%; top: 15%; animation-delay: 1s; }
-.b3 { width: 150px; height: 150px; right: 14%; bottom: 18%; animation-delay: 2s; }
-.b4 { width: 90px; height: 90px; left: 12%; bottom: 12%; animation-delay: 1.6s; }
-.b5 { width: 60px; height: 60px; left: 50%; top: 20%; animation-delay: .7s; }
+.b1 { font-size: 120px; left: 6%; top: 12%; }
+.b2 { font-size: 80px; right: 10%; top: 15%; animation-delay: 1s; }
+.b3 { font-size: 150px; right: 14%; bottom: 18%; animation-delay: 2s; }
+.b4 { font-size: 90px; left: 12%; bottom: 12%; animation-delay: 1.6s; }
+.b5 { font-size: 60px; left: 50%; top: 20%; animation-delay: .7s; }
 
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }

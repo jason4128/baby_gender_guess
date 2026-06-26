@@ -59,9 +59,9 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const [submitMessage, setSubmitMessage] = useState<{type: 'success'|'error', text: React.ReactNode} | null>(null);
  
   const [guesses, setGuesses] = useState<Guess[]>([]);
-  const [revealState, setRevealState] = useState<'initial' | 'revealing' | 'revealed' | 'finished'>('initial');
+  const [revealState, setRevealState] = useState<'initial' | 'safe_opening' | 'revealing' | 'revealed' | 'finished'>('initial');
   const [drawState, setDrawState] = useState<'hidden' | 'ready' | 'drawing' | 'done'>('hidden');
-  const showOnlyReveal = revealState === 'revealed' || revealState === 'revealing';
+  const showOnlyReveal = revealState !== 'finished' && !!siteConfig.actualGender;
   const [rollingName, setRollingName] = useState<string>('');
   const [revealedGenderFlashing, setRevealedGenderFlashing] = useState<string>('男寶');
   const [drawCountdown, setDrawCountdown] = useState<number | null>(null);
@@ -147,10 +147,12 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   }, [siteConfig.closeTime, siteConfig.isVotingOpen]);
 
   const handleStartReveal = () => {
-    setRevealState('revealing');
-    setDrawState('hidden');
-    setDrawCountdown(null);
-    const interval = setInterval(() => {
+    setRevealState('safe_opening');
+    setTimeout(() => {
+      setRevealState('revealing');
+      setDrawState('hidden');
+      setDrawCountdown(null);
+      const interval = setInterval(() => {
       setRevealedGenderFlashing(prev => prev === '男寶' ? '女寶' : '男寶');
     }, 150);
 
@@ -179,6 +181,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
         }, 1000);
       }, 4000);
     }, 10000);
+    }, 3000);
   };
 
   const handleStartDraw = (isAuto = false) => {
@@ -225,8 +228,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
       return;
     }
 
-    if (!formData.name.trim() || !formData.contact.trim() || !formData.inviteCode.trim()) {
-      setSubmitMessage({ type: 'error', text: "請填寫姓名 / 聯絡方式 / 邀請碼。" });
+    if (!formData.name.trim() || !formData.contact.trim()) {
+      setSubmitMessage({ type: 'error', text: "請填寫姓名與聯絡方式。" });
       return;
     }
 
@@ -234,23 +237,6 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
     setSubmitMessage(null);
 
     try {
-      const codeStr = formData.inviteCode.trim().toUpperCase();
-      const codeRef = doc(db, "inviteCodes", codeStr);
-      const codeSnap = await getDoc(codeRef);
-
-      if (!codeSnap.exists()) {
-        setSubmitMessage({ type: 'error', text: "無效的邀請碼，請確認後再試。" });
-        setSubmitting(false);
-        return;
-      }
-
-      const codeData = codeSnap.data();
-      if (codeData.used) {
-        setSubmitMessage({ type: 'error', text: "此邀請碼已被使用過囉！" });
-        setSubmitting(false);
-        return;
-      }
-
       const q = query(collection(db, "guesses"), where("contact", "==", formData.contact.trim()));
       const snap = await getDocs(q);
       
@@ -261,15 +247,12 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
       }
 
       await addDoc(collection(db, "guesses"), {
-        ...formData,
-        inviteCode: codeStr,
+        name: formData.name.trim(),
+        contact: formData.contact.trim(),
+        gender: formData.gender,
+        wish: formData.wish.trim(),
         createdAt: serverTimestamp()
       });
-
-      await setDoc(codeRef, {
-        used: true,
-        usedBy: formData.name.trim()
-      }, { merge: true });
 
       setSubmitMessage({
         type: 'success', 
@@ -277,7 +260,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           <>
             已成功送出 💜<br/>
             <strong>{formData.name}</strong> 的猜測是：<strong>{formData.gender}</strong><br/>
-            謝謝你的參與與祝福，等揭曉寶寶性別後，如果猜對就有機會抽到小禮物喔！
+            謝謝你的參與與祝福，等揭曉寶寶性別後，如果猜對就有機會獲得喵喵伴手禮喔！
           </>
         )
       });
@@ -322,7 +305,6 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
               <div key={g.id} className={`px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-sm flex items-center gap-1.5 ${isDarkModal ? 'bg-white/10 border-white/20 text-white' : 'bg-white dark:bg-slate-800 border-[var(--color-glass-border)] text-[var(--color-primary-dark)]'}`}>
                 <span>👶</span>
                 <span>{g.name}</span>
-                <span className="text-[10px] opacity-60 font-mono">({g.relation})</span>
               </div>
             ))}
           </div>
@@ -427,13 +409,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                           <strong className={`text-base ${isDarkModal ? 'text-white' : 'text-[var(--color-primary-dark)]'}`}>
                             🎉 特等獎得主 {idx + 1}：{item.name}
                           </strong>
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 font-mono shrink-0">
-                            {item.relation}
-                          </span>
                         </div>
                         <div className="text-xs leading-relaxed space-y-1 font-medium">
-                          <div>📞 聯絡方式：{item.contact}</div>
-                          <div>🎁 期望禮物：{item.giftWish || "—"}</div>
                           <div className="italic text-gray-500 mt-1">✍️ 祝福留言："{item.wish || "祝寶寶健康平安"}"</div>
                         </div>
                       </div>
@@ -451,49 +428,76 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
   if (loading) return null;
 
+  const hasPublishedGender = !!siteConfig.actualGender;
+
   return (
     <>
       <div className="floating-bg">
-        <div className="bubble b1" />
-        <div className="bubble b2" />
-        <div className="bubble b3" />
-        <div className="bubble b4" />
-        <div className="bubble b5" />
+        <div className="bubble b1" style={{ color: isGambling ? 'rgba(251, 191, 36, 0.15)' : undefined }}>$</div>
+        <div className="bubble b2" style={{ color: isGambling ? 'rgba(251, 191, 36, 0.15)' : undefined }}>$</div>
+        <div className="bubble b3" style={{ color: isGambling ? 'rgba(251, 191, 36, 0.15)' : undefined }}>$</div>
+        <div className="bubble b4" style={{ color: isGambling ? 'rgba(251, 191, 36, 0.15)' : undefined }}>$</div>
+        <div className="bubble b5" style={{ color: isGambling ? 'rgba(251, 191, 36, 0.15)' : undefined }}>$</div>
       </div>
+
+      {/* Full-Screen Casino Background Hero (only shown during countdown / before gender is published) */}
+      {!hasPublishedGender && (
+        <div 
+          id="countdown" 
+          className="relative w-full h-screen flex flex-col justify-end items-center text-white pb-10 bg-cover bg-center select-none" 
+          style={{ backgroundImage: `url(${(import.meta as any).env.BASE_URL || ''}casino.png)` }}
+        >
+          {/* Subtle gradient overlay at the very bottom to blend with the deep dark content background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[var(--color-bg1)] pointer-events-none" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[var(--color-primary)] to-transparent opacity-80" />
+          
+          <div 
+            className="relative z-10 flex flex-col items-center gap-1 cursor-pointer transition-transform hover:scale-105" 
+            onClick={() => document.getElementById('main-content-start')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <span className="text-[11px] sm:text-xs font-black text-amber-400 uppercase tracking-[0.3em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] animate-pulse">
+              往下滑動進入皇家娛樂城 🎰
+            </span>
+            <svg className="w-6 h-6 text-amber-400 animate-bounce drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      <div id="main-content-start" className="scroll-mt-1.5" />
 
       <header className="py-4 md:py-5 w-[min(1180px,calc(100%-24px))] mx-auto relative z-10">
         <div className="shadow-[var(--shadow-custom)] backdrop-blur-[14px] rounded-3xl md:rounded-full px-4 py-3 md:px-[18px] md:py-[14px] flex flex-col md:flex-row justify-between items-center gap-3 md:gap-[14px]" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
           <div className="flex items-center gap-2.5 sm:gap-3 font-extrabold text-[var(--color-primary-dark)] tracking-wider text-sm sm:text-base">
-            <div className="w-[36px] h-[36px] sm:w-[42px] sm:h-[42px] rounded-full grid place-items-center bg-gradient-to-br from-[#c9b3ff] to-[#ffd8ee] shadow-[0_6px_16px_rgba(140,111,232,.18)] text-[16px] sm:text-[20px]">🍼</div>
-            <div>{isGambling ? "🎰 寶寶性別預測娛樂城" : "Baby Gender Guess"}</div>
+            <div className={`w-[36px] h-[36px] sm:w-[42px] sm:h-[42px] rounded-full grid place-items-center ${isGambling ? 'bg-gradient-to-br from-[#ffe066] to-[#ffaa00] shadow-[0_6px_16px_rgba(251,191,36,0.35)]' : 'bg-gradient-to-br from-[#c9b3ff] to-[#ffd8ee] shadow-[0_6px_16px_rgba(140,111,232,.18)]'} text-[16px] sm:text-[20px]`}>🍼</div>
+            <div>{isGambling ? "🎰 澱粉寶寶皇家娛樂城" : "澱粉寶寶皇家娛樂城"}</div>
           </div>
           <nav className="flex gap-1 sm:gap-2 flex-wrap items-center justify-center">
-            {[
+            {(hasPublishedGender ? [
+              { id: 'reveal', label: isGambling ? '👑 派彩開獎' : '🎉 揭曉抽獎' }
+            ] : [
               { id: 'about', label: isGambling ? '下注規則' : '活動說明' },
-              { id: 'countdown', label: isGambling ? '封盤倒數' : '倒數時間' },
               { id: 'vote', label: isGambling ? '立即投注' : '我要猜' },
-              { id: 'gift', label: isGambling ? '派彩福利' : '抽禮物' },
-              ...(siteConfig.actualGender || isAdmin(currentUser?.email)
-                ? [{ id: 'reveal', label: isGambling ? '👑 派彩開獎' : '🎉 揭曉抽獎' }]
-                : [])
-            ].filter(item => !showOnlyReveal).map((item) => (
+              { id: 'gift', label: isGambling ? '派彩福利' : '抽禮物' }
+            ]).filter(item => !showOnlyReveal).map((item) => (
               <button 
                 key={item.id} 
                 onClick={(e) => {
                   e.preventDefault();
                   document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
                 }} 
-                className="cursor-pointer border-none bg-transparent no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]"
+                className={`cursor-pointer border-none bg-transparent no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors ${isGambling ? 'hover:bg-amber-500/10 hover:text-amber-400' : 'hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]'}`}
               >
                 {item.label}
               </button>
             ))}
             {isAdmin(currentUser?.email) ? (
-              <Link to="/admin" className="no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]">
+              <Link to="/admin" className={`no-underline text-[var(--color-text)] font-bold text-xs sm:text-sm px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full transition-colors ${isGambling ? 'hover:bg-amber-500/10 hover:text-amber-400' : 'hover:bg-[rgba(140,111,232,.12)] hover:text-[var(--color-primary-dark)]'}`}>
                 管理後台
               </Link>
             ) : (
-              <Link to="/admin" className="no-underline text-white font-extrabold text-[10px] sm:text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[#b49bff] hover:opacity-90 active:scale-95 transition-all shadow-md">
+              <Link to="/admin" className={`no-underline font-extrabold text-[10px] sm:text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all ${isGambling ? 'bg-gradient-to-r from-[#ffd700] via-[#ffaa00] to-[#b8860b] text-black shadow-[0_4px_12px_rgba(184,134,11,0.4)] hover:shadow-[0_4px_16px_rgba(184,134,11,0.6)]' : 'text-white bg-gradient-to-r from-[var(--color-primary)] to-[#b49bff] shadow-md'} hover:opacity-90 active:scale-95`}>
                 🔑 登入
               </Link>
             )}
@@ -503,16 +507,16 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
       <main>
         <CelebrationBall isOpen={drawState === 'done'} />
-        {(siteConfig.actualGender || isAdmin(currentUser?.email)) && (
+        {hasPublishedGender && (
           <section id="reveal" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10 scroll-mt-6">
             <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 md:p-10 text-center relative overflow-hidden" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
               
               {/* Header Title */}
-              <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold mb-5">
-                {isGambling ? "🎰 澳門現場即時派彩盤口 👑" : "🎉 期待已久的揭曉時刻 👶"}
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold mb-5 ${isGambling ? 'bg-amber-500/10 border border-amber-500/25 text-amber-400 shadow-[0_2px_8px_rgba(251,191,36,0.15)]' : 'bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)]'}`}>
+                {isGambling ? "🎰 澱粉寶寶現場即時派彩盤口 👑" : "🎉 期待已久的揭曉時刻 👶"}
               </div>
               <h2 className="text-[28px] sm:text-[36px] font-extrabold text-[var(--color-primary-dark)] mb-6">
-                {isGambling ? "寶寶性別開獎大廳" : "寶寶性別正式揭曉與幸運抽獎"}
+                {isGambling ? "澱粉寶寶皇家娛樂城・開獎大廳" : "澱粉寶寶皇家娛樂城・揭曉抽獎"}
               </h2>
 
               {/* Phase 1: Gender Reveal Container */}
@@ -553,15 +557,6 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
                 {showOnlyReveal && (
                   <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-start min-h-screen overflow-y-auto overflow-x-hidden select-none pt-16 sm:pt-24 pb-24 text-white dark">
-                    {revealState === 'revealed' && (
-                      <button 
-                        onClick={() => setRevealState('finished')} 
-                        className="fixed top-6 right-6 z-50 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white/70 hover:text-white transition-all backdrop-blur-md cursor-pointer"
-                        title="關閉開獎大廳"
-                      >
-                        ✕
-                      </button>
-                    )}
                     <style>{`
                       @keyframes fgoSpinClockwise {
                         0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); opacity: 0; }
@@ -642,6 +637,14 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         0%, 80.9% { opacity: 0; }
                         81%, 100% { opacity: 1; }
                       }
+                      @keyframes fadeToWhite {
+                        0%, 60% { opacity: 0; }
+                        100% { opacity: 1; }
+                      }
+                      @keyframes fadeFromWhite {
+                        0%, 10% { opacity: 1; background: white; }
+                        100% { opacity: 0; background: white; }
+                      }
                       @keyframes fgoSparkleFloat {
                         0% { transform: translateY(120px) scale(0); opacity: 0; }
                         40% { opacity: 1; }
@@ -658,21 +661,54 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       }
                     `}</style>
                     
-                    {/* Dark Cosmic Void Background */}
-                    <div className="absolute inset-0 bg-[#070514] opacity-100 z-0" />
-                    
-                    {/* Glowing nebulas based on flashing gender state to create tension */}
-                    <div className={`absolute inset-0 transition-all duration-1000 z-0 blur-3xl ${
-                      revealState === 'revealed'
-                        ? 'opacity-40 ' + (siteConfig.actualGender === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent')
-                        : 'opacity-25 ' + (revealedGenderFlashing === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent')
-                    }`} />
+                    {(revealState === 'initial' || revealState === 'safe_opening') ? (
+                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-end pb-[10vh] sm:pb-24">
+                        <div 
+                          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${revealState === 'initial' ? 'opacity-100' : 'opacity-0'}`}
+                          style={{ backgroundImage: `url(${(import.meta as any).env.BASE_URL || ''}safe-close.png)` }}
+                        />
+                        <div 
+                          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${revealState === 'safe_opening' ? 'opacity-100' : 'opacity-0'}`}
+                          style={{ backgroundImage: `url(${(import.meta as any).env.BASE_URL || ''}safe-open.png)` }}
+                        />
+                        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                        
+                        {revealState === 'initial' && (
+                          <div className="relative z-30 flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
+                            <h3 className="text-3xl font-extrabold text-white mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                              {isGambling ? "🎲 莊家已完成性別封盤確認！" : "✨ 性別結果已經送達！"}
+                            </h3>
+                            <button 
+                              onClick={handleStartReveal}
+                              className="px-10 py-5 rounded-full text-xl font-extrabold text-white bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(250,204,21,0.6)] cursor-pointer hover:brightness-110"
+                            >
+                              ⚡ 點擊揭曉寶寶性別 ⚡
+                            </button>
+                          </div>
+                        )}
+                        
+                        {revealState === 'safe_opening' && (
+                          <div className="absolute inset-0 bg-white animate-[fadeToWhite_1.2s_ease-in_forwards] pointer-events-none z-50" />
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 z-[60] pointer-events-none animate-[fadeFromWhite_1.5s_ease-out_forwards]" />
+                        {/* Dark Cosmic Void Background */}
+                        <div className="absolute inset-0 bg-[#070514] opacity-100 z-0" />
+                        
+                        {/* Glowing nebulas based on flashing gender state to create tension */}
+                        <div className={`absolute inset-0 transition-all duration-1000 z-0 blur-3xl ${
+                          revealState === 'revealed'
+                            ? 'opacity-40 ' + (siteConfig.actualGender === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent')
+                            : 'opacity-25 ' + (revealedGenderFlashing === '男寶' ? 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-transparent' : 'bg-gradient-to-tr from-pink-600 via-rose-600 to-transparent')
+                        }`} />
 
-                    {/* Concentric spinning runic arrays (FGO style) */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] aspect-square pointer-events-none z-10">
-                      
-                      {/* Fast spinning arrays (revealing) */}
-                      <div className={`absolute inset-0 transition-opacity duration-1000 ${revealState === 'revealed' ? 'opacity-0' : 'opacity-100'}`}>
+                        {/* Concentric spinning runic arrays (FGO style) */}
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] aspect-square pointer-events-none z-10">
+                          
+                          {/* Fast spinning arrays (revealing) */}
+                          <div className={`absolute inset-0 transition-opacity duration-1000 ${revealState === 'revealed' ? 'opacity-0' : 'opacity-100'}`}>
                         <div 
                           className="absolute left-1/2 top-1/2 border-4 border-dashed border-amber-400/40 rounded-full w-full h-full"
                           style={{ animation: 'fgoSpinClockwise 9.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
@@ -709,12 +745,16 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
                     {/* Giant Pillar of Light summoning beam */}
                     <div 
-                      className={`absolute left-1/2 top-1/2 h-[600px] w-48 pointer-events-none z-10 ${
+                      className={`absolute left-1/2 top-1/2 h-[200vh] w-64 pointer-events-none z-10 ${
                         siteConfig.actualGender === '男寶'
                           ? 'bg-gradient-to-r from-transparent via-blue-400/80 to-transparent'
                           : 'bg-gradient-to-r from-transparent via-pink-400/80 to-transparent'
                       }`}
-                      style={{ animation: 'fgoPillarBurst 9.0s ease-in-out forwards' }}
+                      style={{ 
+                        animation: 'fgoPillarBurst 9.0s ease-in-out forwards',
+                        maskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)'
+                      }}
                     />
 
                     {/* Lightning Sparks flashing overlay */}
@@ -813,7 +853,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     </div>
 
                     {/* Bottom Status panel */}
-                    <div className="relative z-20 mt-8 text-center w-full max-w-md h-[180px]">
+                    <div className="relative z-20 mt-8 text-center w-full max-w-md h-[240px] shrink-0">
                       <div className={`absolute top-0 left-0 w-full transition-opacity duration-500 ${revealState === 'revealing' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <h3 className="text-xl sm:text-2xl font-black text-yellow-300 font-serif tracking-[0.15em] animate-pulse drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
                           {isGambling ? "🎰 聖晶石卡池・寶寶性別召喚中..." : "🔮 聖杯儀式・寶寶性別召喚中..."}
@@ -842,16 +882,33 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     </div>
                     
                     {revealState === 'revealed' && (
-                      <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 mt-12 relative z-20">
-                        {renderPhase2(true)}
+                      <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 mt-16 relative z-20">
+                        <div className="p-6 md:p-8 rounded-[24px] bg-slate-950/80 backdrop-blur-md border border-indigo-900/30 shadow-2xl relative overflow-hidden">
+                          <div className="absolute inset-0 bg-[#070514] opacity-50 pointer-events-none" />
+                          <div className="absolute inset-0 z-0 blur-3xl pointer-events-none opacity-20 bg-gradient-to-tr from-indigo-900 via-purple-900 to-transparent" />
+                          <div className="relative z-10">
+                            {renderPhase2(true)}
+                          </div>
+                        </div>
                       </div>
+                    )}
+                      </>
                     )}
                   </div>
                 )}
               </div>
+              
+              {/* Admin Link on Revealed Modal */}
+              {(revealState === 'revealed' || revealState === 'initial') && (
+                <div className="fixed bottom-4 right-4 z-[110]">
+                  <Link to="/admin" className="text-white/20 hover:text-white/70 text-xs font-mono transition-colors">
+                    管理後台
+                  </Link>
+                </div>
+              )}
 
               {/* Phase 2: Correct Guessers & Lucky Draw Carousel */}
-              {(revealState === 'revealed' || revealState === 'finished') && (
+              {(revealState === 'finished') && (
                 <div className="mt-10 p-6 md:p-8 rounded-[24px] bg-slate-950 text-white shadow-2xl relative overflow-hidden border border-indigo-900/30 text-left">
                    <div className="absolute inset-0 bg-[#070514] opacity-100 pointer-events-none" />
                    <div className="absolute inset-0 transition-opacity duration-1000 z-0 blur-3xl pointer-events-none opacity-30 bg-gradient-to-tr from-indigo-900 via-purple-900 to-transparent" />
@@ -864,18 +921,71 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             </div>
           </section>
         )}
-        {!showOnlyReveal && (
+        {!hasPublishedGender && !showOnlyReveal && (
           <>
+            {/* Scrolled Countdown Block */}
+            <section id="countdown-scrolled" className="py-8 pb-4 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10 text-center scroll-mt-24">
+              <div className="rounded-[var(--radius-xl)] p-8 md:p-12 border border-[var(--color-glass-border)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col items-center gap-6 animate-pulse-custom" style={{ background: 'var(--color-card-grad)' }}>
+                <div className="absolute inset-0 bg-slate-950/25 backdrop-blur-[2px] pointer-events-none" />
+                
+                <div className="relative z-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-[var(--color-primary)] text-xs sm:text-sm font-extrabold tracking-widest uppercase animate-pulse">
+                  👑 澱粉寶寶世紀盤口熱烈開盤中 🎰
+                </div>
+                
+                <h2 className="relative z-10 text-[clamp(28px,5vw,48px)] leading-tight font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-b from-[#fffbeb] via-[#ffd700] to-[#b8860b] drop-shadow-[0_4px_12px_rgba(184,134,11,0.5)]">
+                  澱粉寶寶皇家娛樂城
+                </h2>
+                <p className="relative z-10 text-[clamp(15px,2vw,20px)] font-extrabold tracking-widest text-amber-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  — 世紀性別豪賭・買定離手 —
+                </p>
+
+                <p className="relative z-10 text-[var(--color-muted)] leading-[1.8] max-w-2xl text-sm sm:text-base font-semibold">
+                  倒數計時器歸零後將自動封盤！支持心中看好的寶寶性別，填寫真實姓名與聯絡方式，附上您的祝福語即投單！封盤揭曉後，系統將從猜對的玩家中抽取幸運特獎發放尊榮好禮 💸
+                </p>
+
+                <div className="relative z-10 mt-2 w-full max-w-xl mx-auto">
+                  <p className="text-xs sm:text-sm font-bold text-amber-200/90 mb-4 tracking-widest uppercase flex items-center justify-center gap-2">
+                    <span>⏳</span> 距離下注封盤截止倒數 <span>⏳</span>
+                  </p>
+                  <div className="grid grid-cols-4 gap-3 sm:gap-4">
+                    <div className="bg-black/65 backdrop-blur-md border border-yellow-500/35 rounded-2xl p-3 sm:p-5 text-center shadow-[0_8px_32px_rgba(184,134,11,0.18)]">
+                      <div className="text-[var(--color-primary)] text-2xl sm:text-4xl font-black font-mono tracking-tight">{timeLeft.days}</div>
+                      <div className="text-amber-200/80 text-[10px] sm:text-xs font-extrabold mt-1">天</div>
+                    </div>
+                    <div className="bg-black/65 backdrop-blur-md border border-yellow-500/35 rounded-2xl p-3 sm:p-5 text-center shadow-[0_8px_32px_rgba(184,134,11,0.18)]">
+                      <div className="text-[var(--color-primary)] text-2xl sm:text-4xl font-black font-mono tracking-tight">{timeLeft.hours}</div>
+                      <div className="text-amber-200/80 text-[10px] sm:text-xs font-extrabold mt-1">小時</div>
+                    </div>
+                    <div className="bg-black/65 backdrop-blur-md border border-yellow-500/35 rounded-2xl p-3 sm:p-5 text-center shadow-[0_8px_32px_rgba(184,134,11,0.18)]">
+                      <div className="text-[var(--color-primary)] text-2xl sm:text-4xl font-black font-mono tracking-tight">{timeLeft.minutes}</div>
+                      <div className="text-amber-200/80 text-[10px] sm:text-xs font-extrabold mt-1">分鐘</div>
+                    </div>
+                    <div className="bg-black/65 backdrop-blur-md border border-yellow-500/35 rounded-2xl p-3 sm:p-5 text-center shadow-[0_8px_32px_rgba(184,134,11,0.18)]">
+                      <div className="text-[var(--color-primary)] text-2xl sm:text-4xl font-black font-mono tracking-tight">{timeLeft.seconds}</div>
+                      <div className="text-amber-200/80 text-[10px] sm:text-xs font-extrabold mt-1">秒</div>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => document.getElementById('vote')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="relative z-10 mt-4 cursor-pointer bg-gradient-to-r from-[#ffd700] via-[#ffaa00] to-[#b8860b] text-black font-black text-xs sm:text-sm px-8 py-3.5 rounded-full shadow-[0_12px_28px_rgba(184,134,11,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all"
+                >
+                  🎰 立即送出免費下注 💰
+                </button>
+              </div>
+            </section>
+
             <section className="py-4 pb-6 w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
               <div className="rounded-[var(--radius-xl)] p-6 md:p-10 border border-[var(--color-glass-border,rgba(255,255,255,0.8))] shadow-[var(--shadow-custom)] grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-6 items-center overflow-hidden relative" style={{ background: 'var(--color-card-grad)' }}>
             <div>
-              <div className="inline-flex items-center gap-2 bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-4 py-2.5 rounded-full text-sm font-extrabold mb-[18px]">
+              <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-extrabold mb-[18px] ${isGambling ? 'bg-amber-500/10 border border-amber-500/25 text-amber-400 shadow-[0_2px_8px_rgba(251,191,36,0.15)]' : 'bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)]'}`}>
                 {isGambling ? "🔥 全台最大盤口熱烈開盤中・買定離手！" : "✨ 一起來猜猜看，寶寶到底是男生還是女生？"}
               </div>
-              <h1 className="text-[clamp(32px,5vw,56px)] leading-[1.12] text-[var(--color-primary-dark)] mb-3.5 font-extrabold whitespace-pre-line">
-                {isGambling ? "🎰 2026年全球最火爆！\n寶寶性別預測競猜娛樂城 💸" : "猜猜我們的小寶寶\n是男寶還是女寶 💜"}
+              <h1 className="text-[clamp(24px,4vw,40px)] sm:text-[clamp(28px,4.5vw,48px)] leading-[1.15] text-[var(--color-primary-dark)] mb-3.5 font-extrabold whitespace-pre-line">
+                {isGambling ? "🎰 2026年全球最火爆！\n澱粉寶寶皇家娛樂城 💸" : "澱粉寶寶皇家娛樂城\n猜猜寶寶是男寶還是女寶 💜"}
               </h1>
-              <p className="text-[var(--color-muted)] leading-[1.9] text-base mb-6">
+              <p className="text-[var(--color-muted)] leading-[1.9] text-base mb-6 font-semibold">
                 {isGambling ? "【賠率全新升級：1 賠 1.95】支持心中所屬陣營，不需儲值，填寫祝福直接免費領取下注金！猜對在性別正式揭曉派彩日即有機會抽出極奢大禮！🎁" : "我們想把迎接寶寶的喜悅分享給每一位家人朋友～在正式揭曉前，先來玩一個小小的猜謎活動吧！猜對的人將有機會獲得小禮物 🎁"}
               </p>
 
@@ -886,7 +996,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     e.preventDefault();
                     document.getElementById('vote')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="cursor-pointer border-none inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(140,111,232,.34)]"
+                  className={`cursor-pointer border-none inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all ${isGambling ? 'bg-gradient-to-r from-[#ffd700] via-[#ffaa00] to-[#b8860b] text-black shadow-[0_12px_28px_rgba(184,134,11,0.4)] hover:shadow-[0_16px_32px_rgba(184,134,11,0.6)]' : 'text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:shadow-[0_16px_32px_rgba(140,111,232,.34)]'} hover:-translate-y-0.5`}
                 >
                   {isGambling ? "⚡ 立即瘋狂下注" : "立即參加猜猜看"}
                 </button>
@@ -896,7 +1006,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     e.preventDefault();
                     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="cursor-pointer inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.12)] hover:-translate-y-0.5 hover:opacity-90"
+                  className={`cursor-pointer inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all ${isGambling ? 'text-amber-400 border border-amber-500/30' : 'text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.12)]'} hover:-translate-y-0.5 hover:opacity-90`}
                   style={{ background: 'var(--color-glass-bg)' }}
                 >
                   {isGambling ? "📖 閱讀下注攻略" : "先看活動規則"}
@@ -933,9 +1043,9 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 <div className="absolute px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 bg-white/90 dark:bg-slate-800 rounded-full shadow-[0_10px_24px_rgba(120,93,200,.12)] text-[var(--color-primary-dark)] text-[11px] sm:text-[13px] font-extrabold animate-[floatY_7s_ease-in-out_infinite] right-[18px] sm:right-[24px] bottom-[55px] sm:bottom-[76px] [animation-delay:1.4s]">
                   {isGambling ? "💎 自動結算派彩" : "🧸 Guess & Win"}
                 </div>
-                <div className="w-[78%] aspect-square rounded-full bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)] flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden">
+                <div className={`w-[78%] aspect-square rounded-full flex items-center justify-center animate-[pulse-custom_5s_ease-in-out_infinite] overflow-hidden ${isGambling ? 'bg-[conic-gradient(from_180deg,#fffbea,#fef3c7,#f59e0b,#ffd700,#fffbea)] shadow-[inset_0_12px_30px_rgba(255,255,255,0.45),_0_18px_36px_rgba(245,158,11,0.35)]' : 'bg-[conic-gradient(from_220deg,#ffd1e8,#eadbff,#d6eaff,#ffd1e8)] shadow-[inset_0_12px_30px_rgba(255,255,255,.78),_0_18px_36px_rgba(120,93,200,.15)]'}`}>
                   <img 
-                    src={isGambling ? `${import.meta.env.BASE_URL}IMG_1604.png` : (siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage)} 
+                    src={isGambling ? `${(import.meta as any).env.BASE_URL}IMG_1604.png` : (siteConfig.actualGender === '男寶' ? siteConfig.boyImageUrl : siteConfig.actualGender === '女寶' ? siteConfig.girlImageUrl : babyImage)} 
                     alt="Baby" 
                     className="w-full h-full object-cover" 
                     referrerPolicy="no-referrer" 
@@ -948,13 +1058,13 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
         <section id="about" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
           <div className="text-center mb-6">
-            <div className="inline-block px-3.5 py-2 rounded-full bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold mb-3">
+            <div className={`inline-block px-3.5 py-2 rounded-full text-[13px] font-extrabold mb-3 ${isGambling ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm' : 'bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)]'}`}>
               {isGambling ? "🎲 PLAYING GUIDE & ODDS" : "ABOUT THE EVENT"}
             </div>
             <h2 className="text-[clamp(28px,4vw,40px)] text-[var(--color-primary-dark)] mb-2.5 font-bold">
               {isGambling ? "🎰 娛樂城投注攻略" : "活動怎麼玩？"}
             </h2>
-            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base">
+            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base font-semibold">
               {isGambling 
                 ? "支持心中看好的寶寶性別，填寫真實姓名與聯絡方式，附上您的祝福語即投單！封盤揭曉後，系統將從猜對的玩家中抽取幸運特獎發放尊榮好禮 💸"
                 : "選擇你覺得寶寶是男生還是女生，填上姓名與聯絡方式，最後再留下祝福就完成啦！等寶寶正式揭曉後，我們會從 猜對的人 裡抽出幸運朋友送上小禮物 💝"
@@ -963,78 +1073,47 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5 mt-7">
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full after:bg-[radial-gradient(circle,rgba(205,187,255,.25),rgba(205,187,255,0))]" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]">1️⃣</div>
+            <div className={`border shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden ${isGambling ? 'after:bg-[radial-gradient(circle,rgba(251,191,36,0.15),transparent)]' : 'after:bg-[radial-gradient(circle,rgba(205,187,255,.25),transparent)]'} after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full`} style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className={`w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl font-black ${isGambling ? 'bg-gradient-to-br from-[#ffd700] to-[#ffaa00] text-amber-950 shadow-[0_4px_12px_rgba(251,191,36,0.35)]' : 'bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]'}`}>1️⃣</div>
               <h3 className="text-xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
                 {isGambling ? "選擇押注盤口" : "選擇你的答案"}
               </h3>
-              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px]">
+              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px] font-semibold">
                 {isGambling ? "點選您看好的寶寶性別陣營（男寶/女寶），目前雙向賠率全面升級為 1:1.95！" : "選擇你猜測的寶寶性別，可以是「男寶」或「女寶」。"}
               </p>
             </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full after:bg-[radial-gradient(circle,rgba(205,187,255,.25),rgba(205,187,255,0))]" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]">2️⃣</div>
+            <div className={`border shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden ${isGambling ? 'after:bg-[radial-gradient(circle,rgba(251,191,36,0.15),transparent)]' : 'after:bg-[radial-gradient(circle,rgba(205,187,255,.25),transparent)]'} after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full`} style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className={`w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl font-black ${isGambling ? 'bg-gradient-to-br from-[#ffd700] to-[#ffaa00] text-amber-950 shadow-[0_4px_12px_rgba(251,191,36,0.35)]' : 'bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]'}`}>2️⃣</div>
               <h3 className="text-xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
                 {isGambling ? "實名投單送祝福" : "填寫姓名與聯絡方式"}
               </h3>
-              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px]">
+              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px] font-semibold">
                 {isGambling ? "填寫正確姓名與LINE或手機聯絡資訊，並留下最誠摯的祝福，不需資金即可免費送出下注！" : "方便我們在揭曉後通知猜對的朋友，也可以留下對寶寶或爸媽的祝福。"}
               </p>
             </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full after:bg-[radial-gradient(circle,rgba(205,187,255,.25),rgba(205,187,255,0))]" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]">3️⃣</div>
+            <div className={`border shadow-[var(--shadow-custom)] rounded-[24px] p-6 relative overflow-hidden ${isGambling ? 'after:bg-[radial-gradient(circle,rgba(251,191,36,0.15),transparent)]' : 'after:bg-[radial-gradient(circle,rgba(205,187,255,.25),transparent)]'} after:content-[''] after:absolute after:-right-[18px] after:-top-[18px] after:w-[90px] after:h-[90px] after:rounded-full`} style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
+              <div className={`w-[54px] h-[54px] rounded-[18px] grid place-items-center mb-3.5 text-2xl font-black ${isGambling ? 'bg-gradient-to-br from-[#ffd700] to-[#ffaa00] text-amber-950 shadow-[0_4px_12px_rgba(251,191,36,0.35)]' : 'bg-gradient-to-br from-[rgba(205,187,255,.68)] to-[rgba(255,216,238,.7)]'}`}>3️⃣</div>
               <h3 className="text-xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
                 {isGambling ? "封盤揭曉爆獎" : "揭曉後抽出小禮物"}
               </h3>
-              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px]">
+              <p className="text-[var(--color-muted)] leading-[1.85] text-[15px] font-semibold">
                 {isGambling ? "截止日一到立即封盤！寶寶正式誕生揭曉後，平台結算從猜對的投注單中抽出尊榮大獎！" : "活動截止後不再接受投票，等寶寶性別揭曉後，會從猜對的人中抽出幸運得主！"}
               </p>
             </div>
           </div>
         </section>
 
-        <section id="countdown" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
-          <div className="text-center mb-6">
-            <div className="inline-block px-3.5 py-2 rounded-full bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold mb-3">
-              {isGambling ? "⏰ CLOSING COUNTDOWN" : "COUNTDOWN"}
-            </div>
-            <h2 className="text-[clamp(28px,4vw,40px)] text-[var(--color-primary-dark)] mb-2.5 font-bold">
-              {isGambling ? "🎰 距離下注封盤還有" : "距離截止投票還有"}
-            </h2>
-            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base">
-              {isGambling ? "倒數計時器歸零後將自動封盤！抓緊時間立刻投注，買定離手！" : "截止時間由後台設定，時間一到將自動關閉投票。"}
-            </p>
-          </div>
 
-          <div className="grid grid-cols-4 gap-2.5 sm:gap-4 mt-6 max-w-2xl mx-auto">
-            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.days}</div>
-              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">天</div>
-            </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.hours}</div>
-              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">小時</div>
-            </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.minutes}</div>
-              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">分鐘</div>
-            </div>
-            <div className="border shadow-[var(--shadow-custom)] rounded-2xl sm:rounded-[24px] px-2 py-3.5 sm:px-3.5 sm:py-[22px] text-center animate-pulse" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
-              <div className="text-[var(--color-primary-dark)] text-xl sm:text-[clamp(28px,5vw,34px)] font-extrabold mb-1 sm:mb-2">{timeLeft.seconds}</div>
-              <div className="text-[var(--color-muted)] text-xs sm:text-sm font-bold">秒</div>
-            </div>
-          </div>
-        </section>
 
         <section id="vote" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
           <div className="text-center mb-6">
-            <div className="inline-block px-3.5 py-2 rounded-full bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] text-[13px] font-extrabold mb-3">
+            <div className={`inline-block px-3.5 py-2 rounded-full text-[13px] font-extrabold mb-3 ${isGambling ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm' : 'bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)]'}`}>
               {isGambling ? "🎰 PLACE YOUR BETS" : "MAKE YOUR GUESS"}
             </div>
             <h2 className="text-[clamp(28px,4vw,40px)] text-[var(--color-primary-dark)] mb-2.5 font-bold">
               {isGambling ? "🎰 競猜盤口：立即買定離手！ 💰" : "留下你的猜測吧 💜"}
             </h2>
-            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base">
+            <p className="text-[var(--color-muted)] leading-[1.9] max-w-[780px] mx-auto text-base font-semibold">
               {isGambling 
                 ? "支持心中所屬寶寶性別，填寫玩家實名姓名與聯絡電話，不需資金即可免費送出投注！猜對者將在揭曉日參與豪華大禮派彩！"
                 : "選擇你的答案後，再填寫基本資料與祝福，我們就能把這份期待一起收藏起來。"
@@ -1048,7 +1127,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 <h3 className="text-2xl text-[var(--color-primary-dark)] font-bold">
                   {isGambling ? "🎰 下注競猜面板" : "票選寶寶性別"}
                 </h3>
-                <div className="bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">即時賠率統計</div>
+                <div className={`px-3 py-2 rounded-full text-[13px] font-extrabold leading-none ${isGambling ? 'bg-amber-500/10 border border-amber-500/25 text-amber-400' : 'bg-[rgba(140,111,232,.12)] border border-[rgba(140,111,232,.15)] text-[var(--color-primary-dark)]'}`}>即時賠率統計</div>
               </div>
               <div className="text-[var(--color-muted)] leading-[1.8] text-sm mb-5">
                 {isGambling ? "選擇您看好的競猜陣營：男寶與女寶兩側賠率高達 1:1.95 點，預測勝率 50% 驚人高爆！" : "先選擇你支持的隊伍吧！投票後下方比例會自動更新。"}
@@ -1056,13 +1135,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4.5">
                 <label className={`relative rounded-[24px] px-[18px] py-[22px] min-h-[210px] cursor-pointer transition-all border-2 flex flex-col justify-between overflow-hidden ${
-                  themeId === 'milktea'
-                    ? `bg-gradient-to-b from-[#fdfbf9] to-[#f5ebe2] text-[#524339] ${
-                        formData.gender === '男寶' 
-                          ? 'border-[#b08e72] ring-2 ring-[#b08e72] shadow-[0_18px_34px_rgba(176,142,114,0.22)] -translate-y-1' 
-                          : 'border-[#eedac5] hover:border-[#b08e72] hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(176,142,114,0.12)]'
-                      }`
-                    : isGambling 
+                  isGambling 
                     ? `bg-slate-950/80 text-white ${
                         formData.gender === '男寶'
                           ? 'border-sky-400 ring-2 ring-sky-400 shadow-[0_18px_34px_rgba(14,165,233,0.3)] -translate-y-1'
@@ -1080,7 +1153,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       <div className="w-[68px] h-[68px] sm:w-[76px] sm:h-[76px] rounded-2xl overflow-hidden border-2 border-sky-400/40 shadow-sm bg-white/20">
                         <img src={babyBoyIcon} alt="寶寶男孩" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
-                      <div className="bg-white/80 dark:bg-slate-800 text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">
+                      <div className={`px-3 py-2 rounded-full text-[13px] font-extrabold leading-none ${isGambling ? 'bg-amber-400 text-amber-950' : 'bg-white/80 dark:bg-slate-800 text-[var(--color-primary-dark)]'}`}>
                         {isGambling ? "賠率 1.95" : "Team Boy"}
                       </div>
                     </div>
@@ -1094,13 +1167,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </label>
 
                 <label className={`relative rounded-[24px] px-[18px] py-[22px] min-h-[210px] cursor-pointer transition-all border-2 flex flex-col justify-between overflow-hidden ${
-                  themeId === 'milktea'
-                    ? `bg-gradient-to-b from-[#fdfbf9] to-[#f5ebe2] text-[#524339] ${
-                        formData.gender === '女寶' 
-                          ? 'border-[#b08e72] ring-2 ring-[#b08e72] shadow-[0_18px_34px_rgba(176,142,114,0.22)] -translate-y-1' 
-                          : 'border-[#eedac5] hover:border-[#b08e72] hover:-translate-y-1 hover:shadow-[0_16px_28px_rgba(176,142,114,0.12)]'
-                      }`
-                    : isGambling 
+                  isGambling 
                     ? `bg-slate-950/80 text-white ${
                         formData.gender === '女寶'
                           ? 'border-pink-400 ring-2 ring-pink-400 shadow-[0_18px_34px_rgba(236,72,153,0.3)] -translate-y-1'
@@ -1118,7 +1185,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       <div className="w-[68px] h-[68px] sm:w-[76px] sm:h-[76px] rounded-2xl overflow-hidden border-2 border-pink-400/40 shadow-sm bg-white/20">
                         <img src={babyGirlIcon} alt="寶寶女孩" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
-                      <div className="bg-white/80 dark:bg-slate-800 text-[var(--color-primary-dark)] px-3 py-2 rounded-full text-[13px] font-extrabold leading-none">
+                      <div className={`px-3 py-2 rounded-full text-[13px] font-extrabold leading-none ${isGambling ? 'bg-pink-400 text-pink-950' : 'bg-white/80 dark:bg-slate-800 text-[var(--color-primary-dark)]'}`}>
                         {isGambling ? "賠率 1.95" : "Team Girl"}
                       </div>
                     </div>
@@ -1133,8 +1200,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
               </div>
 
               <div className={`mt-4.5 border rounded-[18px] p-4 backdrop-blur-sm ${
-                themeId === 'milktea'
-                  ? 'border-[#eedac5] bg-white/50'
+                  isGambling 
+                  ? 'border-amber-500/30 bg-amber-950/20'
                   : 'border-[rgba(140,111,232,.15)] bg-black/10 dark:bg-black/30'
               }`}>
                 <div className="flex justify-between gap-2.5 mb-3 text-[var(--color-primary-dark)] text-sm font-extrabold">
@@ -1142,21 +1209,17 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                   <span>男寶 {boyPercent}% / 女寶 {girlPercent}%</span>
                 </div>
                 <div className={`h-[14px] rounded-full overflow-hidden flex ${
-                  themeId === 'milktea' ? 'bg-[#f5ebe2]' : 'bg-[#f0e9ff] dark:bg-slate-850'
+                  isGambling ? 'bg-amber-950/50' : 'bg-[#f0e9ff] dark:bg-slate-850'
                 }`}>
                   <div className="h-full bg-gradient-to-r from-[#00bfff] to-[#00f0ff] transition-all duration-300" style={{ width: `${boyPercent}%` }}></div>
                   <div className="h-full bg-gradient-to-r from-[#ff007f] to-[#ff66b2] transition-all duration-300" style={{ width: `${girlPercent}%` }}></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div className={`rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)] border ${
-                    themeId === 'milktea' 
-                      ? 'bg-white/60 border-[#eedac5]' 
-                      : 'bg-white/10 dark:bg-slate-900/60 border-sky-500/20'
+                      isGambling ? 'bg-amber-950/20 border-sky-500/20' : 'bg-white/10 dark:bg-slate-900/60 border-sky-500/20'
                   }`}>💙 男寶總押注量：<span>{isGambling ? `${stats.boy * 1000} 萬` : stats.boy}</span></div>
                   <div className={`rounded-[16px] py-3 px-3.5 text-center text-sm font-extrabold text-[var(--color-primary-dark)] border ${
-                    themeId === 'milktea' 
-                      ? 'bg-white/60 border-[#eedac5]' 
-                      : 'bg-white/10 dark:bg-slate-900/60 border-pink-500/20'
+                      isGambling ? 'bg-amber-950/20 border-pink-500/20' : 'bg-white/10 dark:bg-slate-900/60 border-pink-500/20'
                   }`}>💖 女寶總押注量：<span>{isGambling ? `${stats.girl * 1000} 萬` : stats.girl}</span></div>
                 </div>
               </div>
@@ -1185,59 +1248,23 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     <label htmlFor="name" className="text-sm font-extrabold text-[var(--color-primary-dark)]">
                       {isGambling ? "下注玩家姓名 / 暱稱 *" : "姓名 / 暱稱 *"}
                     </label>
-                    <input id="name" name="name" value={formData.name} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)]" type="text" placeholder="例如：玩家小龍 / 賭神高進" required />
+                    <input id="name" name="name" value={formData.name} onChange={handleInputChange} className={`w-full bg-white/10 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] ${isGambling ? 'border border-amber-500/20 focus:shadow-[0_0_0_4px_rgba(251,191,36,0.2)]' : 'border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)]'}`} type="text" placeholder="例如：玩家小龍 / 賭神高進" required />
                   </div>
 
                   <div className="flex flex-col gap-2 mb-3.5">
                     <label htmlFor="contact" className="text-sm font-extrabold text-[var(--color-primary-dark)]">
                       {isGambling ? "玩家聯絡管道 (LINE / 電話) *" : "聯絡方式 *"}
                     </label>
-                    <input id="contact" name="contact" value={formData.contact} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)]" type="text" placeholder="LINE ID / 電話 / 手機號碼" required />
-                  </div>
-
-                  <div className="flex flex-col gap-2 mb-3.5 col-span-1 sm:col-span-2">
-                    <label htmlFor="inviteCode" className="text-sm font-extrabold text-[var(--color-primary-dark)]">
-                      {isGambling ? "🎟️ VIP 邀請碼 (必填) *" : "🎟️ 活動邀請碼 (必填) *"}
-                    </label>
-                    <input id="inviteCode" name="inviteCode" value={formData.inviteCode} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)] font-mono tracking-widest uppercase" type="text" placeholder="輸入 8 碼邀請碼" required />
+                    <input id="contact" name="contact" value={formData.contact} onChange={handleInputChange} className={`w-full bg-white/10 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] ${isGambling ? 'border border-amber-500/20 focus:shadow-[0_0_0_4px_rgba(251,191,36,0.2)]' : 'border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)]'}`} type="text" placeholder="LINE ID / 電話 / 手機號碼" required />
                   </div>
 
                   <div className="flex flex-col gap-2 mb-3.5 col-span-1 sm:col-span-2">
                     <label htmlFor="wish" className="text-sm font-extrabold text-[var(--color-primary-dark)]">下注附言 / 給寶寶與爸媽的祝福語</label>
-                    <textarea id="wish" name="wish" value={formData.wish} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)] min-h-[120px] resize-y leading-[1.7]" placeholder="例如：恭喜當爸爸媽媽！祝寶寶健康快樂，爆發超凡好運 💜"></textarea>
-                  </div>
-
-                  <div className="flex flex-col gap-2 mb-3.5">
-                    <label htmlFor="giftWish" className="text-sm font-extrabold text-[var(--color-primary-dark)]">
-                      {isGambling ? "🎯 若猜對，想兌換的派彩禮物" : "如果猜對，想抽的小禮物"}
-                    </label>
-                    <select id="giftWish" name="giftWish" value={formData.giftWish} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] cursor-pointer">
-                      <option value="" className="text-black">請選擇派彩方向（可不填）</option>
-                      <option className="text-black">咖啡 / 飲料券</option>
-                      <option className="text-black">小甜點 / 餅乾禮盒</option>
-                      <option className="text-black">超商禮券</option>
-                      <option className="text-black">可愛小物 / 文具</option>
-                      <option className="text-black">都可以，我純粹來送祝福 💕</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-2 mb-3.5">
-                    <label htmlFor="relation" className="text-sm font-extrabold text-[var(--color-primary-dark)]">
-                      {isGambling ? "🤝 玩家與主辦莊家關係" : "你是我們的"}
-                    </label>
-                    <select id="relation" name="relation" value={formData.relation} onChange={handleInputChange} className="w-full bg-white/10 border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] cursor-pointer">
-                      <option value="" className="text-black">請選擇親疏關係（可不填）</option>
-                      <option className="text-black">家人</option>
-                      <option className="text-black">親戚</option>
-                      <option className="text-black">朋友</option>
-                      <option className="text-black">同事</option>
-                      <option className="text-black">同學</option>
-                      <option className="text-black">其他</option>
-                    </select>
+                    <textarea id="wish" name="wish" value={formData.wish} onChange={handleInputChange} className={`w-full bg-white/10 rounded-[16px] px-4 py-3.5 text-[15px] text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)] min-h-[120px] resize-y leading-[1.7] ${isGambling ? 'border border-amber-500/20 focus:shadow-[0_0_0_4px_rgba(251,191,36,0.2)]' : 'border border-[rgba(140,111,232,.2)] dark:bg-slate-900/60 focus:shadow-[0_0_0_4px_rgba(140,111,232,.15)]'}`} placeholder="例如：恭喜當爸爸媽媽！祝寶寶健康快樂，爆發超凡好運 💜"></textarea>
                   </div>
                 </div>
 
-                <div className="mt-2.5 bg-[rgba(140,111,232,.08)] border border-[rgba(140,111,232,.15)] rounded-[16px] px-4 py-3.5 text-[var(--color-muted)] text-[13px] leading-[1.8]">
+                <div className={`mt-2.5 rounded-[16px] px-4 py-3.5 text-[var(--color-muted)] text-[13px] leading-[1.8] border ${isGambling ? 'bg-amber-500/5 border-amber-500/20' : 'bg-[rgba(140,111,232,.08)] border-[rgba(140,111,232,.15)]'}`}>
                   {isGambling ? (
                     <>
                       📌 <strong>🎰 莊家風控及投注規章：</strong><br/>
@@ -1258,7 +1285,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </div>
 
                 <div className="flex gap-3 flex-wrap items-center mt-4.5">
-                  <button type="submit" disabled={submitting} className={`inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] w-full sm:w-auto shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(140,111,232,.34)] ${submitting ? 'opacity-70 cursor-not-allowed hover:translate-y-0' : ''}`}>
+                  <button type="submit" disabled={submitting} className={`inline-flex items-center justify-center gap-2 px-[22px] py-[14px] rounded-full text-[15px] font-extrabold transition-all w-full sm:w-auto ${isGambling ? 'bg-gradient-to-r from-[#ffd700] via-[#ffaa00] to-[#b8860b] text-black shadow-[0_12px_28px_rgba(184,134,11,0.4)] hover:shadow-[0_16px_32px_rgba(184,134,11,0.6)]' : 'text-white bg-gradient-to-br from-[var(--color-primary)] to-[#ab90ff] shadow-[0_12px_28px_rgba(140,111,232,.28)] hover:shadow-[0_16px_32px_rgba(140,111,232,.34)]'} hover:-translate-y-0.5 ${submitting ? 'opacity-70 cursor-not-allowed hover:translate-y-0' : ''}`}>
                     {isClosed ? (isGambling ? '⚠️ 已截止封盤' : '活動已截止') : (isGambling ? '⚡ 免費下注（確定送出）' : '送出我的猜測')}
                   </button>
                   {submitting && <div className="inline-flex items-center gap-2 text-[var(--color-muted)] text-sm font-bold">⏳ 投單同步至雲端伺服器中...</div>}
@@ -1279,22 +1306,22 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
         </section>
 
         <section id="gift" className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
-          <div className="relative mt-[18px] text-white rounded-[30px] shadow-[0_18px_40px_rgba(109,80,207,.28)] p-[30px] overflow-hidden after:content-[''] after:absolute after:w-[220px] after:h-[220px] after:rounded-full after:bg-white/10 after:-right-[60px] after:-top-[60px] before:content-[''] before:absolute before:w-[160px] before:h-[160px] before:rounded-full before:bg-white/10 before:-left-[30px] before:-bottom-[60px]" style={{ background: themeId === 'milktea' ? 'linear-gradient(135deg, #b08e72, #d1b49a)' : (isGambling ? 'linear-gradient(135deg, #1e1b4b, #311042)' : 'linear-gradient(135deg, #8c6fe8, #b49bff)') }}>
+          <div className={`relative mt-[18px] text-white rounded-[30px] ${isGambling ? 'shadow-[0_18px_40px_rgba(184,134,11,0.25)]' : 'shadow-[0_18px_40px_rgba(109,80,207,.28)]'} p-[30px] overflow-hidden after:content-[''] after:absolute after:w-[220px] after:h-[220px] after:rounded-full after:bg-white/10 after:-right-[60px] after:-top-[60px] before:content-[''] before:absolute before:w-[160px] before:h-[160px] before:rounded-full before:bg-white/10 before:-left-[30px] before:-bottom-[60px]`} style={{ background: isGambling ? 'linear-gradient(135deg, #1a1400, #664d00)' : 'linear-gradient(135deg, #8c6fe8, #b49bff)' }}>
             <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.1fr_.9fr] gap-6 items-center">
               <div>
                 <h3 className="text-[30px] mb-3 font-bold">
-                  {isGambling ? "🎁 猜中性別：送特級派彩大獎 🎰" : "猜對的人，我們會抽出小禮物 🎁"}
+                  {isGambling ? "🎁 猜中性別：送特級喵喵伴手禮 🎰" : "猜對的人，我們會抽出喵喵伴手禮 🎁"}
                 </h3>
                 <p className="leading-[1.95] opacity-95 text-[15px] font-medium">
                   {isGambling ? (
                     <>
                       為慶祝本次寶寶性別大盤口熱烈開啟，莊家特設百萬派彩池！<br/><br/>
-                      本盤口結算後，系統將自動校對猜對正確性別的幸運名單，並隨機派發尊榮玩家好禮（例如超商大額禮券、星巴克大杯飲料等）。感謝全體玩家一同見證這場年度高爆競猜！ 💸
+                      本盤口結算後，系統將自動校對猜對正確性別的幸運名單，並隨機派發尊榮玩家好禮。感謝全體玩家一同見證這場年度高爆競猜！ 💸
                     </>
                   ) : (
                     <>
-                      為了讓這份等待更有參與感，我們準備了一點小心意給猜對的朋友。<br/><br/>
-                      等到寶寶性別正式揭曉後，會從 <strong>猜對答案的名單中抽出幸運得得主</strong>，並用你留下的聯絡方式通知你。謝謝你一起參與這個可愛又充滿期待的小活動 💜
+                      為了讓這份等待更有參與感，我們準備了一份精緻的喵喵伴手禮給猜對的朋友。<br/><br/>
+                      等到寶寶性別正式揭曉後，會從 <strong>猜對答案的名單中抽出幸運得主</strong>，並用你留下的聯絡方式通知你。謝謝你一起參與這個可愛又充滿期待的小活動 💜
                     </>
                   )}
                 </p>
@@ -1309,16 +1336,16 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 </div>
                 <div className="bg-white/15 border border-white/20 rounded-[18px] px-4 py-3.5 leading-[1.75] backdrop-blur-[8px]">
                   {isGambling ? (
-                    <>🎉 <strong>揭曉方式：</strong>性別揭曉後，系統結算並由莊家一對一派發好禮。</>
+                    <>🎉 <strong>揭曉方式：</strong>性別揭曉後，系統結算並由莊家一對一派發喵喵伴手禮。</>
                   ) : (
                     <>🎉 <strong>公布方式：</strong>性別揭曉後，由爸媽另行通知或於社群公布。</>
                   )}
                 </div>
                 <div className="bg-white/15 border border-white/20 rounded-[18px] px-4 py-3.5 leading-[1.75] backdrop-blur-[8px]">
                   {isGambling ? (
-                    <>💝 <strong>派彩內容：</strong>豪華超商禮券、香醇咖啡大杯兌換券等大獎。</>
+                    <>💝 <strong>派彩內容：</strong>精緻且具紀念價值的喵喵伴手禮。</>
                   ) : (
-                    <>💝 <strong>禮物內容：</strong>可自訂為超商禮券、咖啡券、小甜點、可愛小物等。</>
+                    <>💝 <strong>禮物內容：</strong>精緻且具紀念價值的喵喵伴手禮。</>
                   )}
                 </div>
               </div>
@@ -1330,11 +1357,11 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
       </main>
 
-      {!showOnlyReveal && (
+      {!hasPublishedGender && !showOnlyReveal && (
         <footer className="py-[30px] pb-[42px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10">
           <div className="border shadow-[var(--shadow-custom)] rounded-[28px] p-6 text-center" style={{ background: 'var(--color-glass-bg)', borderColor: 'var(--color-glass-border)', borderWidth: '1px' }}>
             <h3 className="text-2xl text-[var(--color-primary-dark)] mb-2.5 font-bold">
-              {isGambling ? "👑 皇家娛樂城與您共度溫馨時刻 🍼" : "謝謝你參與我們的小活動 🍼"}
+              {isGambling ? "👑 澱粉寶寶皇家娛樂城與您共度溫馨時刻 🍼" : "謝謝你參與我們的小活動 🍼"}
             </h3>
             <p className="text-[var(--color-muted)] leading-[1.85] mb-3.5 font-medium">
               {isGambling 
@@ -1344,8 +1371,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
             </p>
             <div className="text-[var(--color-muted)] text-[13px] font-mono">
               {isGambling 
-                ? "Baby Gender Guess Casino Platform ・ Powered by Venice Royal & AI Studio & Firebase Admin" 
-                : "Baby Gender Guess ・ Powered by AI Studio & Firebase"
+                ? "澱粉寶寶皇家娛樂城 Casino Platform ・ Powered by Venice Royal & AI Studio & Firebase Admin" 
+                : "澱粉寶寶皇家娛樂城 ・ Powered by AI Studio & Firebase"
               }
             </div>
           </div>

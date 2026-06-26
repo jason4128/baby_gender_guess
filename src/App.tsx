@@ -12,7 +12,7 @@ import { themes } from './themes';
 
 export default function App() {
   const [themeId, setThemeId] = useState(() => {
-    return localStorage.getItem('baby_gender_theme_id') || 'milktea';
+    return localStorage.getItem('baby_gender_theme_id') || 'casino-gold';
   });
   
   const [hasSeenStory, setHasSeenStory] = useState(false);

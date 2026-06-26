@@ -367,7 +367,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
   };
 
   const exportCSV = () => {
-    const headers = ["姓名", "聯絡方式", "猜測", "關係", "邀請碼", "想抽到的禮物", "祝福留言", "建立時間", "是否猜對"];
+    const headers = ["姓名", "聯絡方式", "猜測", "祝福留言", "建立時間", "是否猜對"];
     const rows = guesses.map(item => {
       const isCorrect = siteConfig.actualGender
         ? (item.gender === siteConfig.actualGender ? "猜對" : "未中")
@@ -376,9 +376,6 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
         item.name || "",
         item.contact || "",
         item.gender || "",
-        item.relation || "",
-        item.inviteCode || "",
-        item.giftWish || "",
         item.wish || "",
         formatDate(item.createdAt),
         isCorrect
@@ -651,68 +648,6 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
         </div>
       </section>
 
-      <section className="border border-[var(--color-glass-border)] shadow-[var(--shadow-custom)] rounded-[var(--radius-xl)] p-5 mb-5 backdrop-blur-sm" style={{ background: 'var(--color-glass-bg)' }}>
-        <div className="flex justify-between items-center gap-4 flex-wrap mb-4">
-          <h2 className="text-[var(--color-primary-dark)] text-xl font-bold">
-            {isGambling ? "🎟️ 邀請碼管理 (VIP 通行證)" : "邀請碼管理"}
-          </h2>
-          <button onClick={generateInviteCodes} className="bg-gradient-to-br from-[#3b82f6] to-[#60a5fa] text-white px-4 py-2.5 rounded-full text-sm font-extrabold hover:-translate-y-px transition-transform shadow-[0_12px_28px_rgba(59,130,246,.28)]">
-            + 產生 10 組邀請碼
-          </button>
-        </div>
-        
-        <h3 className="text-sm font-bold text-gray-500 mb-2 mt-4">未使用的邀請碼</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {inviteCodes.filter(c => !c.used).length === 0 ? (
-             <div className="col-span-full bg-white/10 dark:bg-slate-900/60 border border-[var(--color-glass-border)] rounded-2xl p-4 leading-relaxed text-[var(--color-muted)]">
-               目前沒有未使用的邀請碼。
-             </div>
-          ) : (
-            inviteCodes.filter(c => !c.used).map(code => (
-              <div 
-                key={code.id} 
-                onClick={() => handleCopyCode(code.id)}
-                className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-transform border-[#3b82f6] bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 hover:shadow-md cursor-pointer`}
-                title="點擊複製"
-              >
-                <span className="font-mono text-lg font-bold tracking-wider">{code.id}</span>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700`}>
-                  未使用 (點擊複製)
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-
-        <h3 className="text-sm font-bold text-gray-500 mb-2 mt-8">已使用的邀請碼</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {inviteCodes.filter(c => c.used).length === 0 ? (
-             <div className="col-span-full bg-white/10 dark:bg-slate-900/60 border border-[var(--color-glass-border)] rounded-2xl p-4 leading-relaxed text-[var(--color-muted)]">
-               目前沒有已使用的邀請碼。
-             </div>
-          ) : (
-            inviteCodes.filter(c => c.used).map(code => (
-              <div 
-                key={code.id} 
-                className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-transform border-gray-200 opacity-50 bg-gray-50 dark:bg-slate-800 relative group`}
-              >
-                <button 
-                  onClick={() => handleResetCode(code.id)}
-                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-100 text-red-600 rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                  title="恢復此邀請碼"
-                >
-                  &times;
-                </button>
-                <span className="font-mono text-lg font-bold tracking-wider">{code.id}</span>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full bg-gray-200 text-gray-500`}>
-                  已由 {code.usedBy} 使用
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
       <section className="border border-[var(--color-glass-border)] shadow-[var(--shadow-custom)] rounded-[var(--radius-xl)] p-5 mb-5 backdrop-blur-sm relative overflow-hidden" style={{ background: 'var(--color-glass-bg)' }}>
         {drawAnimating && (
           <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center backdrop-blur-sm transition-all">
@@ -780,7 +715,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
             </div>
           </div>
           <div>
-             <div className="inline-flex items-center px-3 py-2 rounded-full text-[13px] font-extrabold bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.15)]">
+             <div className={`inline-flex items-center px-3 py-2 rounded-full text-[13px] font-extrabold ${isGambling ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' : 'bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.15)]'}`}>
                {isGambling ? "🎉 派彩中獎名單" : "抽獎結果"}
              </div>
              <div className="grid gap-3 mt-3">
@@ -814,7 +749,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
           <h2 className="text-[var(--color-primary-dark)] text-xl font-bold">
             {isGambling ? "📋 全體玩家投注歷史單" : "全部投票名單"}
           </h2>
-          <span className="inline-flex items-center px-3 py-2 rounded-full text-[13px] font-extrabold bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.15)]">共 {guesses.length} 筆</span>
+          <span className={`inline-flex items-center px-3 py-2 rounded-full text-[13px] font-extrabold ${isGambling ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' : 'bg-[rgba(140,111,232,.12)] text-[var(--color-primary-dark)] border border-[rgba(140,111,232,.15)]'}`}>共 {guesses.length} 筆</span>
         </div>
 
         <div className="overflow-auto rounded-[20px] border border-[var(--color-glass-border)] bg-white/5 backdrop-blur-sm h-[500px]">
@@ -825,9 +760,6 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
                 <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">玩家姓名</th>
                 <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">聯絡方式</th>
                 <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">下注猜測</th>
-                <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">關係</th>
-                <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">使用邀請碼</th>
-                <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">{isGambling ? "預計想領派彩" : "想抽到的禮物"}</th>
                 <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">祝福附言</th>
                 <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">投單時間</th>
                 <th className="p-3.5 text-left text-[13px] font-extrabold text-[var(--color-primary-dark)]">結算狀態</th>
@@ -836,7 +768,7 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
             </thead>
             <tbody>
               {guesses.length === 0 ? (
-                <tr><td colSpan={11} className="p-4 text-center text-[var(--color-muted)]">目前尚無投票資料。</td></tr>
+                <tr><td colSpan={8} className="p-4 text-center text-[var(--color-muted)]">目前尚無投票資料。</td></tr>
               ) : (
                 guesses.map((item, idx) => {
                   const isCorrect = siteConfig.actualGender ? item.gender === siteConfig.actualGender : null;
@@ -846,9 +778,6 @@ export default function AdminDashboard({ themeId, setThemeId }: AdminDashboardPr
                       <td className="p-3.5 align-top font-bold">{escapeHtml(item.name || "")}</td>
                       <td className="p-3.5 align-top break-all">{escapeHtml(item.contact || "")}</td>
                       <td className={`p-3.5 align-top font-extrabold ${item.gender === "男寶" ? "text-sky-400 dark:text-sky-300" : "text-pink-400 dark:text-pink-300"}`}>{escapeHtml(item.gender || "")}</td>
-                      <td className="p-3.5 align-top">{escapeHtml(item.relation || "")}</td>
-                      <td className="p-3.5 align-top font-mono text-sm">{escapeHtml(item.inviteCode || "")}</td>
-                      <td className="p-3.5 align-top">{escapeHtml(item.giftWish || "")}</td>
                       <td className="p-3.5 align-top max-w-[200px] break-words text-sm">{escapeHtml(item.wish || "")}</td>
                       <td className="p-3.5 align-top text-xs font-mono">{formatDate(item.createdAt)}</td>
                       <td className="p-3.5 align-top font-bold">

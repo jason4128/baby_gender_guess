@@ -21,8 +21,8 @@ export interface Guess {
   name: string;
   contact: string;
   wish: string;
-  giftWish: string;
-  relation: string;
+  giftWish?: string;
+  relation?: string;
   inviteCode?: string;
   createdAt: any; // Firestore timestamp
 }

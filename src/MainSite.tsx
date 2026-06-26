@@ -16,6 +16,10 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { SiteConfig, Guess, isAdmin } from "./types";
 // @ts-ignore
 import babyImage from "./components/assets/images/IMG_1589.jpeg";
+// @ts-ignore
+import babyBoyCardImg from "./components/assets/images/IMG_1587.jpeg";
+// @ts-ignore
+import babyGirlCardImg from "./components/assets/images/IMG_1588.jpeg";
 const babyBoyIcon = `${(import.meta as any).env.BASE_URL || "/"}boy.png`;
 const babyGirlIcon = `${(import.meta as any).env.BASE_URL || "/"}girl.png`;
 import { themes } from "./themes";
@@ -79,6 +83,10 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
   const [revealState, setRevealState] = useState<
     "initial" | "safe_opening" | "revealing" | "revealed" | "finished"
   >("initial");
+  const [safeSubState, setSafeSubState] = useState<
+    "closed" | "opened" | "faded_out" | "paused"
+  >("closed");
+  const [isFlashing, setIsFlashing] = useState(false);
   const [drawState, setDrawState] = useState<
     "hidden" | "ready" | "drawing" | "done"
   >("hidden");
@@ -171,6 +179,15 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
   const handleStartReveal = () => {
     setRevealState("safe_opening");
+    setSafeSubState("opened"); // Step 1: Open safe (closed safe fades out, open safe fades in)
+    setIsFlashing(false);
+
+    // Step 2: Linger for 3 seconds on the open safe (from 1000ms to 4000ms), then start direct glowing flash
+    setTimeout(() => {
+      setIsFlashing(true);
+    }, 4000);
+
+    // Step 3: Once fully flashed white (at 5000ms), transition directly into the card summoning process
     setTimeout(() => {
       setRevealState("revealing");
       setDrawState("hidden");
@@ -208,7 +225,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
           }, 1000);
         }, 4000);
       }, 10000);
-    }, 3000);
+    }, 5000);
   };
 
   const handleStartDraw = (isAuto = false) => {
@@ -741,8 +758,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     <img
                       src={
                         siteConfig.actualGender === "男寶"
-                          ? babyBoyIcon
-                          : babyGirlIcon
+                          ? babyBoyCardImg
+                          : babyGirlCardImg
                       }
                       className="w-[180px] sm:w-[220px] rounded-2xl shadow-[0_10px_30px_rgba(140,111,232,0.3)] mb-6"
                       alt="Revealed Gender"
@@ -878,18 +895,23 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     revealState === "safe_opening" ? (
                       <div className="absolute inset-0 z-20 flex flex-col items-center justify-end pb-[10vh] sm:pb-24">
                         <div
-                          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${revealState === "initial" ? "opacity-100" : "opacity-0"}`}
+                          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${safeSubState === "closed" ? "opacity-100" : "opacity-0"}`}
                           style={{
                             backgroundImage: `url(${(import.meta as any).env.BASE_URL || ""}safe-close.png)`,
                           }}
                         />
                         <div
-                          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${revealState === "safe_opening" ? "opacity-100" : "opacity-0"}`}
+                          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${safeSubState === "opened" ? "opacity-100" : "opacity-0"}`}
                           style={{
                             backgroundImage: `url(${(import.meta as any).env.BASE_URL || ""}safe-open.png)`,
                           }}
                         />
                         <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+                        {/* Direct glowing white flash overlay */}
+                        <div
+                          className={`absolute inset-0 bg-white transition-opacity duration-1000 pointer-events-none z-50 ${isFlashing ? "opacity-100" : "opacity-0"}`}
+                        />
 
                         {revealState === "initial" && (
                           <div className="relative z-30 flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
@@ -905,10 +927,6 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                               ⚡ 點擊揭曉寶寶性別 ⚡
                             </button>
                           </div>
-                        )}
-
-                        {revealState === "safe_opening" && (
-                          <div className="absolute inset-0 bg-white animate-[fadeToWhite_1.2s_ease-in_forwards] pointer-events-none z-50" />
                         )}
                       </div>
                     ) : (
@@ -1080,13 +1098,13 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                               }}
                             >
                               <img
-                                src={babyBoyIcon}
+                                src={babyBoyCardImg}
                                 alt="Fate Card Boy Base"
                                 className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
                                 referrerPolicy="no-referrer"
                               />
                               <img
-                                src={babyGirlIcon}
+                                src={babyGirlCardImg}
                                 alt="Fate Card Girl"
                                 className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
                                 style={{
@@ -1101,8 +1119,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                               <img
                                 src={
                                   siteConfig.actualGender === "男寶"
-                                    ? babyBoyIcon
-                                    : babyGirlIcon
+                                    ? babyBoyCardImg
+                                    : babyGirlCardImg
                                 }
                                 alt="Fate Card Final"
                                 className="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"

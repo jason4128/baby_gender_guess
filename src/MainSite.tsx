@@ -765,8 +765,13 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                 )}
 
                 {showOnlyReveal && (
-                  <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-start min-h-screen overflow-y-auto overflow-x-hidden select-none pt-4 landscape:pt-2 sm:pt-16 md:pt-24 pb-12 sm:pb-24 text-white dark">
+                  <div className="reveal-container fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-start min-h-screen overflow-y-auto overflow-x-hidden select-none pt-12 sm:pt-28 md:pt-36 lg:pt-40 pb-12 sm:pb-24 text-white dark">
                     <style>{`
+                      @media (max-height: 550px) and (orientation: landscape) {
+                        .reveal-container {
+                          padding-top: 0.5rem !important;
+                        }
+                      }
                       @keyframes fgoSpinClockwise {
                         0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); opacity: 0; }
                         15% { opacity: 0.8; }

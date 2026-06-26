@@ -114,18 +114,44 @@ export const CelebrationBall: React.FC<CelebrationBallProps> = ({ isOpen }) => {
         .animate-confetti {
           animation: confettiFall var(--duration) linear var(--delay) infinite;
         }
+        
+        .hanging-rope {
+          height: 280px;
+        }
+        .ball-scale {
+          transform: scale(1);
+          transform-origin: top center;
+        }
+        
+        @media (max-width: 640px) {
+          .hanging-rope {
+            height: 180px;
+          }
+          .ball-scale {
+            transform: scale(0.85);
+          }
+        }
+
+        @media (max-height: 550px) and (orientation: landscape) {
+          .hanging-rope {
+            height: 40px !important;
+          }
+          .ball-scale {
+            transform: scale(0.5) !important;
+          }
+        }
       `}</style>
 
       {/* Hanging rope */}
       <div
-        className="w-[3px] bg-red-600/80 shadow-[0_2px_10px_rgba(0,0,0,0.15)] origin-top h-[120px] sm:h-[240px] landscape:h-[40px]"
+        className="w-[3px] bg-red-600/80 shadow-[0_2px_10px_rgba(0,0,0,0.15)] origin-top hanging-rope"
         style={{
           animation: "ropeWobble 4s ease-in-out infinite",
         }}
       />
 
       {/* The Decorative Ball Container */}
-      <div className="relative -mt-1 w-0 h-0 flex items-center justify-center transform scale-75 sm:scale-100 landscape:scale-50 landscape:origin-top">
+      <div className="relative -mt-1 w-0 h-0 flex items-center justify-center ball-scale">
         {/* Confetti particles spraying from the center */}
         {confetti.map((item) => (
           <div

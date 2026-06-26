@@ -186,10 +186,10 @@ export default function Storybook({ onComplete }: StorybookProps) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center relative w-full h-full max-w-4xl"
+                className="flex flex-col items-center justify-between relative w-full h-full max-w-6xl mx-auto p-4 landscape:py-2"
               >
                 {/* Upper Countdown Indicator */}
-                <div className="mb-2 sm:mb-6 text-white text-xs sm:text-base font-extrabold flex items-center gap-1.5 sm:gap-2.5 bg-black/50 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-white/10 backdrop-blur-md shadow-lg">
+                <div className="z-10 text-white text-xs sm:text-base font-extrabold flex items-center gap-1.5 sm:gap-2.5 bg-black/60 px-4 sm:px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-lg flex-shrink-0">
                   <span className="animate-spin text-amber-400">🎰</span>
                   <span className="hidden sm:inline">
                     澱粉寶寶皇家娛樂城即將開門...
@@ -202,15 +202,15 @@ export default function Storybook({ onComplete }: StorybookProps) {
                 </div>
 
                 {/* Main Invitation Image */}
-                <div className="max-w-[90vw] max-h-[70vh] landscape:max-h-[50vh] flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex-shrink-0">
+                <div className="flex-1 w-full flex items-center justify-center min-h-0 my-2 z-0 relative">
                   <img
                     src={`${(import.meta as any).env.BASE_URL}letter2.png`}
                     alt="Invitation Letter"
-                    className="max-w-full h-auto max-h-[60vh] landscape:max-h-[45vh] object-contain rounded-2xl border border-white/20"
+                    className="w-full h-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)]"
                   />
                 </div>
 
-                <p className="mt-2 sm:mt-6 text-gray-400 text-[10px] sm:text-xs font-bold tracking-widest animate-pulse">
+                <p className="z-10 text-gray-300 text-[10px] sm:text-xs font-bold tracking-widest animate-pulse flex-shrink-0 bg-black/60 px-4 py-1.5 rounded-full backdrop-blur-sm">
                   五秒後自動啟動皇家星空傳送儀式 🪐
                 </p>
               </motion.div>

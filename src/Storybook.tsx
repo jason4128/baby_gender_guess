@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface StorybookProps {
   onComplete: () => void;
@@ -10,20 +10,28 @@ export default function Storybook({ onComplete }: StorybookProps) {
   const totalPages = 12; // 0 to 11
 
   // State flow: 'reading' | 'showEnvelope' | 'showInvitation'
-  const [storyState, setStoryState] = useState<'reading' | 'showEnvelope' | 'showInvitation'>('reading');
+  const [storyState, setStoryState] = useState<
+    "reading" | "showEnvelope" | "showInvitation"
+  >("reading");
   const [countdown, setCountdown] = useState(5);
   const [flash, setFlash] = useState(false);
 
-  const images = Array.from({ length: totalPages }, (_, i) => `${(import.meta as any).env.BASE_URL}storybook/${i}.png`);
+  const images = Array.from(
+    { length: totalPages },
+    (_, i) => `${(import.meta as any).env.BASE_URL}storybook/${i}.png`,
+  );
 
   useEffect(() => {
     // Preload all images to prevent sluggish page turns
-    images.forEach(src => {
+    images.forEach((src) => {
       const img = new Image();
       img.src = src;
     });
     // Preload envelope and invitation images
-    [`${(import.meta as any).env.BASE_URL}letter.png`, `${(import.meta as any).env.BASE_URL}letter2.png`].forEach(src => {
+    [
+      `${(import.meta as any).env.BASE_URL}letter.png`,
+      `${(import.meta as any).env.BASE_URL}letter2.png`,
+    ].forEach((src) => {
       const img = new Image();
       img.src = src;
     });
@@ -31,9 +39,9 @@ export default function Storybook({ onComplete }: StorybookProps) {
 
   // Handle invitation countdown
   useEffect(() => {
-    if (storyState === 'showInvitation') {
+    if (storyState === "showInvitation") {
       const interval = setInterval(() => {
-        setCountdown(prev => {
+        setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(interval);
             setFlash(true);
@@ -51,23 +59,22 @@ export default function Storybook({ onComplete }: StorybookProps) {
 
   const handleNext = () => {
     if (currentPage < totalPages - 1) {
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage((prev) => prev + 1);
     } else {
-      setStoryState('showEnvelope');
+      setStoryState("showEnvelope");
     }
   };
 
   const handlePrev = () => {
     if (currentPage > 0) {
-      setCurrentPage(prev => prev - 1);
+      setCurrentPage((prev) => prev - 1);
     }
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#F3E8DC] select-none">
-      
       {/* 1. Main Reading Stage */}
-      {storyState === 'reading' && (
+      {storyState === "reading" && (
         <div className="relative w-full h-full overflow-hidden flex flex-col justify-center items-center bg-[#F3E8DC]">
           <AnimatePresence mode="wait">
             <motion.div
@@ -79,10 +86,10 @@ export default function Storybook({ onComplete }: StorybookProps) {
               className="w-full h-full flex items-center justify-center absolute inset-0 cursor-pointer"
               onClick={handleNext}
             >
-              <img 
-                src={images[currentPage]} 
+              <img
+                src={images[currentPage]}
                 alt={`Story page ${currentPage}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </motion.div>
           </AnimatePresence>
@@ -91,20 +98,22 @@ export default function Storybook({ onComplete }: StorybookProps) {
           <div className="absolute bottom-6 left-0 w-full flex flex-col justify-center items-center z-10 pointer-events-none">
             <div className="flex space-x-2 mb-4">
               {images.map((_, idx) => (
-                <div 
+                <div
                   key={idx}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentPage ? 'w-6 bg-[#8C6F53] shadow-[0_0_8px_rgba(140,111,83,0.4)]' : 'w-1.5 bg-[#8C6F53]/30'}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentPage ? "w-6 bg-[#8C6F53] shadow-[0_0_8px_rgba(140,111,83,0.4)]" : "w-1.5 bg-[#8C6F53]/30"}`}
                 />
               ))}
             </div>
             <div className="text-[#8C6F53]/80 text-xs font-bold tracking-widest animate-pulse drop-shadow-sm">
-              {currentPage === totalPages - 1 ? "點擊打開神秘驚喜" : "點擊畫面翻頁"}
+              {currentPage === totalPages - 1
+                ? "點擊打開神秘驚喜"
+                : "點擊畫面翻頁"}
             </div>
           </div>
 
           {/* Previous area (invisible) for clicking back */}
           {currentPage > 0 && (
-            <div 
+            <div
               className="absolute left-0 top-0 w-1/4 h-full z-10 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
@@ -112,59 +121,58 @@ export default function Storybook({ onComplete }: StorybookProps) {
               }}
             />
           )}
-          
+
           {/* Next area hint (invisible) */}
-          <div 
-              className="absolute right-0 top-0 w-3/4 h-full z-0 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNext();
-              }}
+          <div
+            className="absolute right-0 top-0 w-3/4 h-full z-0 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNext();
+            }}
           />
         </div>
       )}
 
       {/* 2. Interactive Envelope & Invitation Layers */}
-      {storyState !== 'reading' && (
+      {storyState !== "reading" && (
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-[50] flex flex-col items-center justify-center p-6 text-center">
-          
           <AnimatePresence mode="wait">
-            {storyState === 'showEnvelope' && (
+            {storyState === "showEnvelope" && (
               <motion.div
                 key="envelope-stage"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center"
+                className="flex flex-col items-center justify-center w-full h-full max-h-screen"
               >
-                <h2 className="text-2xl sm:text-4xl font-black text-amber-200 tracking-wider mb-8 drop-shadow-[0_4px_12px_rgba(251,191,36,0.2)] animate-pulse">
+                <h2 className="text-xl sm:text-3xl lg:text-4xl font-black text-amber-200 tracking-wider mb-4 sm:mb-8 drop-shadow-[0_4px_12px_rgba(251,191,36,0.2)] animate-pulse">
                   ✉️ 收到一封神秘信件...
                 </h2>
-                
+
                 <motion.div
                   initial={{ scale: 0.8, y: 50, opacity: 0 }}
-                  animate={{ 
-                    scale: 1, 
-                    y: [0, -12, 0], 
-                    opacity: 1 
+                  animate={{
+                    scale: 1,
+                    y: [0, -12, 0],
+                    opacity: 1,
                   }}
-                  transition={{ 
+                  transition={{
                     scale: { duration: 0.5, ease: "easeOut" },
-                    y: { repeat: Infinity, duration: 2.2, ease: "easeInOut" }
+                    y: { repeat: Infinity, duration: 2.2, ease: "easeInOut" },
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setStoryState('showInvitation')}
-                  className="max-w-[320px] sm:max-w-[420px] cursor-pointer drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)] hover:drop-shadow-[0_20px_60px_rgba(251,191,36,0.3)] transition-all duration-300"
+                  onClick={() => setStoryState("showInvitation")}
+                  className="max-w-[240px] sm:max-w-[420px] cursor-pointer drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)] hover:drop-shadow-[0_20px_60px_rgba(251,191,36,0.3)] transition-all duration-300 flex-shrink-0"
                 >
-                  <img 
-                    src={`${(import.meta as any).env.BASE_URL}letter.png`} 
+                  <img
+                    src={`${(import.meta as any).env.BASE_URL}letter.png`}
                     alt="Mysterious Envelope"
-                    className="w-full object-contain rounded-2xl border border-amber-500/20"
+                    className="w-full max-h-[40vh] object-contain rounded-2xl border border-amber-500/20"
                   />
                 </motion.div>
 
-                <div className="mt-8 text-amber-300 text-base sm:text-lg font-black tracking-widest animate-pulse flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-6 py-2.5 rounded-full">
+                <div className="mt-4 sm:mt-8 text-amber-300 text-sm sm:text-lg font-black tracking-widest animate-pulse flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full">
                   <span>✨</span>
                   <span>點擊打開神秘信封</span>
                   <span>✨</span>
@@ -172,7 +180,7 @@ export default function Storybook({ onComplete }: StorybookProps) {
               </motion.div>
             )}
 
-            {storyState === 'showInvitation' && (
+            {storyState === "showInvitation" && (
               <motion.div
                 key="invitation-stage"
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -181,23 +189,28 @@ export default function Storybook({ onComplete }: StorybookProps) {
                 className="flex flex-col items-center justify-center relative w-full h-full max-w-4xl"
               >
                 {/* Upper Countdown Indicator */}
-                <div className="mb-6 text-white text-sm sm:text-base font-extrabold flex items-center gap-2.5 bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md shadow-lg">
+                <div className="mb-2 sm:mb-6 text-white text-xs sm:text-base font-extrabold flex items-center gap-1.5 sm:gap-2.5 bg-black/50 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-white/10 backdrop-blur-md shadow-lg">
                   <span className="animate-spin text-amber-400">🎰</span>
-                  <span>澱粉寶寶皇家娛樂城即將開門...</span>
-                  <span className="text-yellow-400 text-2xl sm:text-3xl font-black font-mono w-8 text-center animate-bounce">{countdown}</span>
+                  <span className="hidden sm:inline">
+                    澱粉寶寶皇家娛樂城即將開門...
+                  </span>
+                  <span className="sm:hidden">皇家娛樂城即將開門...</span>
+                  <span className="text-yellow-400 text-xl sm:text-3xl font-black font-mono w-6 sm:w-8 text-center animate-bounce">
+                    {countdown}
+                  </span>
                   <span>秒</span>
                 </div>
 
                 {/* Main Invitation Image */}
-                <div className="max-w-[90vw] max-h-[68vh] flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)]">
-                  <img 
-                    src={`${(import.meta as any).env.BASE_URL}letter2.png`} 
+                <div className="max-w-[90vw] max-h-[70vh] flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex-shrink-0">
+                  <img
+                    src={`${(import.meta as any).env.BASE_URL}letter2.png`}
                     alt="Invitation Letter"
                     className="max-w-full max-h-[60vh] object-contain rounded-2xl border border-white/20"
                   />
                 </div>
 
-                <p className="mt-6 text-gray-400 text-xs font-bold tracking-widest animate-pulse">
+                <p className="mt-3 sm:mt-6 text-gray-400 text-[10px] sm:text-xs font-bold tracking-widest animate-pulse">
                   五秒後自動啟動皇家星空傳送儀式 🪐
                 </p>
               </motion.div>
@@ -207,11 +220,11 @@ export default function Storybook({ onComplete }: StorybookProps) {
       )}
 
       {/* Skip button for early exits */}
-      {storyState === 'reading' && (
-        <button 
+      {storyState === "reading" && (
+        <button
           onClick={(e) => {
             e.stopPropagation();
-            setStoryState('showEnvelope');
+            setStoryState("showEnvelope");
           }}
           className="absolute top-6 right-6 text-[#8C6F53] hover:text-[#5c4733] hover:bg-white/80 text-sm font-bold z-[60] px-4 py-2 rounded-full bg-white/50 border border-[#8C6F53]/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer"
         >
@@ -222,7 +235,7 @@ export default function Storybook({ onComplete }: StorybookProps) {
       {/* Screen flash transition */}
       <AnimatePresence>
         {flash && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -231,7 +244,6 @@ export default function Storybook({ onComplete }: StorybookProps) {
           />
         )}
       </AnimatePresence>
-
     </div>
   );
 }

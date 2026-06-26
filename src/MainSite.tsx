@@ -768,7 +768,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
 
                     {/* Spinning FGO Class Card Back with slow 3D flip */}
                     <div 
-                      className="relative z-20 w-[210px] sm:w-[260px] md:w-[290px] aspect-[2/3]"
+                      className="relative z-20 h-[50vh] sm:h-[60vh] md:h-[65vh] max-h-[450px] aspect-[2/3] shrink-0"
                       style={{ 
                         animation: revealState === 'revealed' ? 'fgoCardHover 4s ease-in-out infinite' : 'fgoCardFloatIn 11.0s ease-out forwards',
                         perspective: '1000px',

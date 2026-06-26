@@ -853,8 +853,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                     </div>
 
                     {/* Bottom Status panel */}
-                    <div className="relative z-20 mt-8 text-center w-full max-w-md h-[240px] shrink-0">
-                      <div className={`absolute top-0 left-0 w-full transition-opacity duration-500 ${revealState === 'revealing' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    <div className="relative z-20 mt-8 text-center w-full max-w-md shrink-0 min-h-[160px]">
+                      <div className={`transition-opacity duration-500 absolute w-full left-0 top-0 ${revealState === 'revealing' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <h3 className="text-xl sm:text-2xl font-black text-yellow-300 font-serif tracking-[0.15em] animate-pulse drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
                           {isGambling ? "🎰 聖晶石卡池・寶寶性別召喚中..." : "🔮 聖杯儀式・寶寶性別召喚中..."}
                         </h3>
@@ -863,7 +863,7 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                         </p>
                       </div>
 
-                      <div className={`absolute top-0 left-0 w-full transition-opacity duration-1000 delay-300 ${revealState === 'revealed' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      <div className={`transition-opacity duration-1000 delay-300 ${revealState === 'revealed' ? 'opacity-100 relative' : 'opacity-0 pointer-events-none absolute w-full left-0 top-0'}`}>
                         <div className="text-sm font-extrabold text-amber-400 mb-2 uppercase tracking-widest font-mono">
                           🏆 SUMMON REVEAL SUCCESS 🏆
                         </div>

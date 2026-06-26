@@ -16,12 +16,11 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { SiteConfig, Guess, isAdmin } from "./types";
 // @ts-ignore
 import babyImage from "./components/assets/images/IMG_1589.jpeg";
-// @ts-ignore
-import babyBoyIcon from "./components/assets/images/IMG_1587.jpeg";
-// @ts-ignore
-import babyGirlIcon from "./components/assets/images/IMG_1588.jpeg";
+const babyBoyIcon = `${(import.meta as any).env.BASE_URL || "/"}boy.png`;
+const babyGirlIcon = `${(import.meta as any).env.BASE_URL || "/"}girl.png`;
 import { themes } from "./themes";
 import { CelebrationBall } from "./components/CelebrationBall";
+import { BarrageWall } from "./components/BarrageWall";
 
 interface MainSiteProps {
   themeId: string;
@@ -1548,6 +1547,8 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
               </div>
             </section>
 
+            <BarrageWall guesses={guesses} />
+
             <section
               id="vote"
               className="py-[26px] w-[min(1180px,calc(100%-32px))] mx-auto relative z-10"
@@ -1590,6 +1591,87 @@ export default function MainSite({ themeId, setThemeId }: MainSiteProps) {
                       ? "選擇您看好的競猜陣營：男寶與女寶兩側賠率高達 1:1.95 點，預測勝率 50% 驚人高爆！"
                       : "先選擇你支持的隊伍吧！投票後下方比例會自動更新。"}
                   </div>
+
+                  {isGambling && (
+                    <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] bg-slate-950 rounded-[24px] overflow-hidden border-2 border-amber-500/30 shadow-[0_12px_40px_rgba(0,0,0,0.6)] mb-5 group">
+                      {/* Image Layer */}
+                      <img
+                        src={
+                          formData.gender === "男寶"
+                            ? `${(import.meta as any).env.BASE_URL}select-boy.png`
+                            : formData.gender === "女寶"
+                              ? `${(import.meta as any).env.BASE_URL}select-girl.png`
+                              : `${(import.meta as any).env.BASE_URL}select.png`
+                        }
+                        alt="寶寶下注賭桌"
+                        className="w-full h-full object-cover transition-all duration-500 group-hover:scale-[1.01]"
+                        referrerPolicy="no-referrer"
+                      />
+
+                      {/* Hotspot buttons on left/right half */}
+                      <div className="absolute inset-0 flex z-10">
+                        {/* Left half - Boy */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              gender: "男寶",
+                            }));
+                          }}
+                          className={`w-1/2 h-full cursor-pointer bg-transparent focus:outline-none transition-all duration-300 relative group/left ${
+                            formData.gender === "男寶"
+                              ? "bg-sky-500/5 border-r-2 border-sky-400/20"
+                              : "hover:bg-sky-500/5"
+                          }`}
+                        >
+                          <div className="absolute top-4 left-4 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-sky-400/30 text-sky-400 text-xs font-black shadow-lg transition-transform duration-300 group-hover/left:scale-105">
+                            💙 點擊下注男寶
+                          </div>
+                        </button>
+
+                        {/* Right half - Girl */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              gender: "女寶",
+                            }));
+                          }}
+                          className={`w-1/2 h-full cursor-pointer bg-transparent focus:outline-none transition-all duration-300 relative group/right ${
+                            formData.gender === "女寶"
+                              ? "bg-pink-500/5 border-l-2 border-pink-400/20"
+                              : "hover:bg-pink-500/5"
+                          }`}
+                        >
+                          <div className="absolute top-4 right-4 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-pink-400/30 text-pink-400 text-xs font-black shadow-lg transition-transform duration-300 group-hover/right:scale-105">
+                            💖 點擊下注女寶
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* Bottom Alert/Guidance Badge */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 border border-amber-500/30 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold tracking-widest text-amber-300 shadow-xl pointer-events-none flex items-center gap-2">
+                        {formData.gender === "男寶" ? (
+                          <>
+                            <span>🎰</span> 已成功在 <strong>男寶 BOY</strong>{" "}
+                            放置籌碼！
+                          </>
+                        ) : formData.gender === "女寶" ? (
+                          <>
+                            <span>🎰</span> 已成功在 <strong>女寶 GIRL</strong>{" "}
+                            放置籌碼！
+                          </>
+                        ) : (
+                          <>
+                            <span>👈</span> 點擊賭桌左側男寶 / 右側女寶放置籌碼{" "}
+                            <span>👉</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4.5">
                     <label

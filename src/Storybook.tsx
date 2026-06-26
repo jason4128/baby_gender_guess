@@ -202,15 +202,15 @@ export default function Storybook({ onComplete }: StorybookProps) {
                 </div>
 
                 {/* Main Invitation Image */}
-                <div className="max-w-[90vw] max-h-[70vh] flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex-shrink-0">
+                <div className="max-w-[90vw] max-h-[70vh] landscape:max-h-[50vh] flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex-shrink-0">
                   <img
                     src={`${(import.meta as any).env.BASE_URL}letter2.png`}
                     alt="Invitation Letter"
-                    className="max-w-full max-h-[60vh] object-contain rounded-2xl border border-white/20"
+                    className="max-w-full h-auto max-h-[60vh] landscape:max-h-[45vh] object-contain rounded-2xl border border-white/20"
                   />
                 </div>
 
-                <p className="mt-3 sm:mt-6 text-gray-400 text-[10px] sm:text-xs font-bold tracking-widest animate-pulse">
+                <p className="mt-2 sm:mt-6 text-gray-400 text-[10px] sm:text-xs font-bold tracking-widest animate-pulse">
                   五秒後自動啟動皇家星空傳送儀式 🪐
                 </p>
               </motion.div>

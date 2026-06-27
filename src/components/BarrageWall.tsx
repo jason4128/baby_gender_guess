@@ -118,13 +118,13 @@ export const BarrageWall: React.FC<BarrageWallProps> = ({ guesses }) => {
               }
             }
             .barrage-track-1 {
-              animation: barrageScroll 25s linear infinite;
+              animation: barrageScroll 50s linear infinite;
             }
             .barrage-track-2 {
-              animation: barrageScroll 35s linear infinite;
+              animation: barrageScroll 65s linear infinite;
             }
             .barrage-track-3 {
-              animation: barrageScroll 28s linear infinite;
+              animation: barrageScroll 58s linear infinite;
             }
             .barrage-track:hover .barrage-scroller {
               animation-play-state: paused;
